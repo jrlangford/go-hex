@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.14.2/.schema/devbox.schema.json",
+  "packages": [
+    "go@latest",
+    "just@latest",
+    "curl@latest",
+    "golangci-lint@latest"
+  ],
+  "shell": {
+    "init_hook": [
+      "echo 'Welcome to Go Hexagonal Architecture Development Environment!' > /dev/null"
+    ],
+    "scripts": {
+      "test": [
+        "just test"
+      ],
+      "build": [
+        "just build"
+      ],
+      "run": [
+        "just run"
+      ]
+    }
+  }
+}
