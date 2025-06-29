@@ -1,8 +1,8 @@
 package secondary
 
-import "go_hex/internal/core/domain/common"
+import "go_hex/internal/core/domain/shared"
 
 // EventPublisher defines the secondary port for publishing domain events.
 type EventPublisher interface {
-	Publish(event common.DomainEvent) error
+	Publish(event shared.DomainEvent) error
 }

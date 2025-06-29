@@ -1,5 +1,4 @@
-// Common domain infrastructure provides shared functionality across domain models.
-package common
+package shared
 
 import (
 	"time"
@@ -16,8 +15,8 @@ type EntityID interface {
 	String() string
 }
 
-// BaseModel provides common functionality for domain models, such as ID generation and validation, and tracking of creation and modification timestamps.
-type BaseModel[T EntityID] struct {
+// BaseEntity provides common functionality for domain entities, such as ID generation and validation, and tracking of creation and modification timestamps.
+type BaseEntity[T EntityID] struct {
 	Id        T         `json:"id" validate:"required"`
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	UpdatedAt time.Time `json:"updated_at" validate:"required,gtfield=CreatedAt"`
@@ -26,25 +25,25 @@ type BaseModel[T EntityID] struct {
 	events []DomainEvent `json:"-"`
 }
 
-func NewBaseModel[T EntityID](id T) BaseModel[T] {
+func NewBaseEntity[T EntityID](id T) BaseEntity[T] {
 	now := time.Now()
-	return BaseModel[T]{
+	return BaseEntity[T]{
 		Id:        id,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
 }
 
-func (b *BaseModel[T]) ID() T {
+func (b *BaseEntity[T]) ID() T {
 	return b.Id
 }
 
-func (b *BaseModel[T]) Touch() {
+func (b *BaseEntity[T]) Touch() {
 	b.UpdatedAt = time.Now()
 }
 
 // AddEvent adds a domain event to the internal event queue
-func (b *BaseModel[T]) AddEvent(event DomainEvent) {
+func (b *BaseEntity[T]) AddEvent(event DomainEvent) {
 	if b.events == nil {
 		b.events = make([]DomainEvent, 0)
 	}
@@ -52,11 +51,11 @@ func (b *BaseModel[T]) AddEvent(event DomainEvent) {
 }
 
 // GetEvents returns all queued domain events
-func (b *BaseModel[T]) GetEvents() []DomainEvent {
+func (b *BaseEntity[T]) GetEvents() []DomainEvent {
 	return b.events
 }
 
 // ClearEvents removes all queued domain events
-func (b *BaseModel[T]) ClearEvents() {
+func (b *BaseEntity[T]) ClearEvents() {
 	b.events = nil
 }

@@ -1,7 +1,7 @@
 package friendship
 
 import (
-	"go_hex/internal/core/domain/common"
+	"go_hex/internal/core/domain/shared"
 	"go_hex/internal/support/validation"
 	"strings"
 
@@ -31,7 +31,7 @@ func NewFriendData(name, title string) (FriendData, error) {
 
 	// Use annotation-based validation
 	if err := validation.Validate(data); err != nil {
-		return FriendData{}, common.NewDomainValidationError(err.Error(), err)
+		return FriendData{}, shared.NewDomainValidationError(err.Error(), err)
 	}
 
 	return data, nil
@@ -39,14 +39,14 @@ func NewFriendData(name, title string) (FriendData, error) {
 
 // Friend is an entity representing a person in the system.
 type Friend struct {
-	common.BaseModel[FriendID]
+	shared.BaseEntity[FriendID]
 	FriendData
 }
 
 func NewFriend(data FriendData) (Friend, error) {
 	friendID := NewFriendID(uuid.New())
 	friend := Friend{
-		BaseModel:  common.NewBaseModel(friendID),
+		BaseEntity: shared.NewBaseEntity(friendID),
 		FriendData: data,
 	}
 
@@ -62,7 +62,7 @@ func NewFriend(data FriendData) (Friend, error) {
 
 func (f *Friend) UpdateData(data FriendData) error {
 	if err := validation.Validate(data); err != nil {
-		return common.NewDomainValidationError(err.Error(), err)
+		return shared.NewDomainValidationError(err.Error(), err)
 	}
 
 	// Store old data for event

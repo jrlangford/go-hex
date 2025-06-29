@@ -2,7 +2,7 @@ package auth
 
 import (
 	"go_hex/internal/core/domain/authorization"
-	"go_hex/internal/core/domain/common"
+	"go_hex/internal/core/domain/shared"
 	"go_hex/internal/support/validation"
 )
 
@@ -27,7 +27,7 @@ func NewClaims(userID, username, email string, roles []string, metadata map[stri
 	}
 
 	if err := validation.Validate(claims); err != nil {
-		return nil, common.NewDomainValidationError("invalid authentication claims", err)
+		return nil, shared.NewDomainValidationError("invalid authentication claims", err)
 	}
 
 	if claims.Metadata == nil {

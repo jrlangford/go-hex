@@ -1,7 +1,7 @@
 package friendship
 
 import (
-	"go_hex/internal/core/domain/common"
+	"go_hex/internal/core/domain/shared"
 	"go_hex/internal/support/validation"
 	"time"
 )
@@ -30,7 +30,7 @@ func NewFriendCreatedEvent(friendID FriendID, friendData FriendData) (FriendCrea
 	}
 
 	if err := validation.Validate(event); err != nil {
-		return FriendCreatedEvent{}, common.NewDomainValidationError("invalid friend created event", err)
+		return FriendCreatedEvent{}, shared.NewDomainValidationError("invalid friend created event", err)
 	}
 
 	return event, nil
@@ -62,7 +62,7 @@ func NewFriendDataUpdatedEvent(friendID FriendID, oldData, newData FriendData) (
 	}
 
 	if err := validation.Validate(event); err != nil {
-		return FriendDataUpdatedEvent{}, common.NewDomainValidationError("invalid friend data updated event", err)
+		return FriendDataUpdatedEvent{}, shared.NewDomainValidationError("invalid friend data updated event", err)
 	}
 
 	return event, nil
@@ -92,13 +92,13 @@ func NewFriendDeletedEvent(friendID FriendID, deletedData FriendData) (FriendDel
 	}
 
 	if err := validation.Validate(event); err != nil {
-		return FriendDeletedEvent{}, common.NewDomainValidationError("invalid friend deleted event", err)
+		return FriendDeletedEvent{}, shared.NewDomainValidationError("invalid friend deleted event", err)
 	}
 
 	return event, nil
 }
 
 // Ensure events implement DomainEvent interface
-var _ common.DomainEvent = (*FriendCreatedEvent)(nil)
-var _ common.DomainEvent = (*FriendDataUpdatedEvent)(nil)
-var _ common.DomainEvent = (*FriendDeletedEvent)(nil)
+var _ shared.DomainEvent = (*FriendCreatedEvent)(nil)
+var _ shared.DomainEvent = (*FriendDataUpdatedEvent)(nil)
+var _ shared.DomainEvent = (*FriendDeletedEvent)(nil)

@@ -7,7 +7,7 @@ import (
 	"go_hex/internal/adapters/driving/http/middleware"
 	"go_hex/internal/core/application"
 	"go_hex/internal/core/domain/authorization"
-	"go_hex/internal/core/domain/common"
+	"go_hex/internal/core/domain/shared"
 	"go_hex/internal/core/domain/friendship"
 	"go_hex/internal/core/ports/secondary"
 	"go_hex/internal/support/auth"
@@ -66,21 +66,21 @@ func (m *MockFriendRepository) FriendExists(id friendship.FriendID) (bool, error
 
 // MockEventPublisher implements the EventPublisher interface for testing.
 type MockEventPublisher struct {
-	events []common.DomainEvent
+	events []shared.DomainEvent
 }
 
 func NewMockEventPublisher() *MockEventPublisher {
 	return &MockEventPublisher{
-		events: make([]common.DomainEvent, 0),
+		events: make([]shared.DomainEvent, 0),
 	}
 }
 
-func (m *MockEventPublisher) Publish(event common.DomainEvent) error {
+func (m *MockEventPublisher) Publish(event shared.DomainEvent) error {
 	m.events = append(m.events, event)
 	return nil
 }
 
-func (m *MockEventPublisher) GetEvents() []common.DomainEvent {
+func (m *MockEventPublisher) GetEvents() []shared.DomainEvent {
 	return m.events
 }
 

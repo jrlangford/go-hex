@@ -1,7 +1,7 @@
 package authorization
 
 import (
-	"go_hex/internal/core/domain/common"
+	"go_hex/internal/core/domain/shared"
 	"go_hex/internal/support/validation"
 )
 
@@ -131,7 +131,7 @@ func (ac AuthorizationContext) IsAdmin() bool {
 // Validate validates the authorization context using the domain validation rules.
 func (ac AuthorizationContext) Validate() error {
 	if err := validation.Validate(ac); err != nil {
-		return common.NewDomainValidationError("invalid authorization context", err)
+		return shared.NewDomainValidationError("invalid authorization context", err)
 	}
 	return nil
 }
