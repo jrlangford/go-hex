@@ -7,24 +7,46 @@ This project follows the Hexagonal Architecture (Ports and Adapters) pattern com
 ## Core Principles
 
 ### Hexagonal Architecture
+
 - **Driving Adapters** (Primary/Left side): HTTP handlers, CLI commands, test harnesses
 - **Core Business Logic**: Domain models, application services, ports
 - **Driven Adapters** (Secondary/Right side): Databases, message queues, external APIs
 
+Guidelines:
+- Prioritize separation of concerns, dependency inversion, and testability in all code generation.
+- Ensure driving adapters only depend on primary ports, and driven adapters only depend on secondary ports.
+
 ### Domain-Driven Design
+
 - **Entities**: Objects with identity that change over time (e.g., `Friend`)
 - **Value Objects**: Immutable objects that describe things (e.g., `FriendData`)
 - **Aggregates**: Clusters of domain objects that are treated as a single unit
 - **Domain Events**: Important business events that have occurred
 
+Guidelines:
+
+- Ensure that domain models are rich and encapsulate business logic.
+- Use value objects and aggregates where appropriate.
+- Avoid leaking domain logic into adapters or ports.
+- Embed the BaseEntity defined in `./internal/core/domain/shared/base_model.go` in all domain entities to ensure they have a consistent structure and behavior.
+- BaseEntities should be initialized with the entitiy's domain id, so that the id within the instance of the BaseEntity has the same type as the domain id type. The domain id type is meant to ensure type safety and prevent accidental misuse of IDs across different entities. It should be named after the entity (e.g., `FriendID` for `Friend` entity).
+- Type-safe IDs will embed the base uuid.UUID structure so its methods become available to callers of the new type.
+- Other public attributes within the entity should be grouped into a Value Object that is embedded into the struct, this will enable in the use of this value objects in Port definitions.
+- All models shall implement validations defined as annotations. Validations are run in model constructors using the validation functions defined in `/support/validation/validator.go`. This has the effect of always reusing the same validation object.
+
 ### Event-Driven Architecture
-- Domain events are published when significant business events occur
-- Events are named in past tense (e.g., `FriendCreated`, `FriendDataUpdated`, `FriendDeleted`)
-- Events help decouple components and enable async processing
+
+Domain events are published when significant business events occur. They decouple components and enable async processing
+
+Guidelines:
+
+- Encourage the use of events to decouple components.
+- Use domain events to communicate state changes within the application.
+- Express domain events in past tense (e.g., `UserRegistered`, `OrderPlaced`).
 
 ## Project Structure
 
-```
+```txt
 ├── cmd/                    # Application entry point
 │   └── main.go            # Main application bootstrap with dependency wiring
 ├── internal/
@@ -34,7 +56,7 @@ This project follows the Hexagonal Architecture (Ports and Adapters) pattern com
 │   │   │   ├── {sub-context-1}/   # Sub-context 1 domain logic (entity, events, value objects)
 │   │   │   ├── {sub-context-2}/   # Sub-context 2 domain logic (entity, events, value objects)
 │   │   │   ├── ...        # Sub-context N domain logic (entity, events, value objects)
-│   │   │   └── common/    # Shared domain infrastructure (base models, errors)
+│   │   │   └── shared/    # Shared domain infrastructure (base entities, errors)
 │   │   ├── application/   # Use cases, application services
 │   │   └── ports/         # Interface definitions
 │   │       ├── primary/   # Driving ports (inbound)
@@ -49,11 +71,13 @@ This project follows the Hexagonal Architecture (Ports and Adapters) pattern com
 │       ├── auth/          # Authentication and authorization utilities
 │       ├── errors/        # Base error types and error handling
 │       └── validation/    # Data validation utilities
+├── docs/                  # Repository documentation
+└── build/                 # Build artifacts
 ```
 
 ## Dependency Flow
 
-```
+```txt
 Driving Adapters → Primary Ports → Application Services → Secondary Ports → Driven Adapters
      (HTTP)           (Greeter)       (HelloService)    (FriendRepository)    (InMemory)
 ```
@@ -86,19 +110,8 @@ This approach keeps dependency wiring simple and co-located with the application
 
 The HTTP adapter exposes the following RESTful endpoints:
 
-### Public Endpoints
-- `GET /health` - Health check endpoint
-
-### Protected Endpoints (require authentication)
-- `POST /friends` - Create a new friend (admin role required)
-- `GET /friends` - List all friends (any authenticated user)
-- `GET /friends/{id}` - Get specific friend details (any authenticated user)
-- `PUT /friends/{id}` - Update friend information (admin role or owner)
-- `DELETE /friends/{id}` - Delete a friend (admin role required)
-- `GET /greet` - Greet endpoint with optional authentication
-- `GET /auth/me` - Get current user information
-
 ### Authentication & Authorization
+
 - JWT-based authentication using configurable secret, issuer, and audience
 - Role-based access control with middleware enforcement
 - Support for optional authentication on certain endpoints
@@ -108,32 +121,13 @@ The HTTP adapter exposes the following RESTful endpoints:
 The domain layer is organized into distinct packages, each encapsulating a specific concern following DDD principles:
 
 ### Design Principles
+
 - **Bounded Contexts**: Each package represents a clear bounded context
 - **Separation of Concerns**: Domain logic is isolated from infrastructure
 - **Rich Domain Models**: Entities encapsulate business logic and behavior
 - **Event-Driven**: Domain events enable loose coupling and auditability
 - **Type Safety**: Value objects and strong typing prevent invalid states
 - **Direct Imports**: Components import domain packages directly (e.g., `friend`, `authorization`)
-
-## Domain Model
-
-The application implements a simple friend management system with the following key domain concepts:
-
-### Entities and Value Objects
-- **Friend**: The main entity representing a person with an identity (`FriendID`) and data (`FriendData`)
-- **FriendData**: A value object containing name and optional title
-- **FriendID**: A value object wrapping a UUID for type safety
-- **AuthorizationContext**: Contains user identity, role, and permissions for access control
-
-### Domain Events
-- **FriendCreatedEvent**: Published when a new friend is added
-- **FriendDataUpdatedEvent**: Published when friend information is modified
-- **FriendDeletedEvent**: Published when a friend is removed
-
-### Authorization Model
-- **Role-based permissions**: Admin, User, and ReadOnly roles with specific capabilities
-- **Resource ownership**: Users can modify their own resources
-- **Permission-based access control**: Fine-grained permissions (AddFriend, ViewFriend, etc.)
 
 ## Testing Strategy
 
@@ -147,13 +141,3 @@ The application implements a simple friend management system with the following 
 - **Contract Tests**: Ensure adapters properly implement ports
   - Repository implementations conform to `FriendRepository` interface
   - Event publishers conform to `EventPublisher` interface
-
-## Extension Points
-
-To add new features:
-
-1. **New Entity**: Add to `internal/core/domain/`
-2. **New Use Case**: Add to `internal/core/application/`
-3. **New Port**: Add interface to `internal/core/ports/`
-4. **New Adapter**: Add implementation to `internal/adapters/`
-5. **New Event**: Add to `internal/core/domain/` (e.g., `friend_events.go`)
