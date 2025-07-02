@@ -14,7 +14,6 @@ import (
 type ContextKey string
 
 const (
-	// TokenClaimsKey is the context key for storing token claims.
 	TokenClaimsKey ContextKey = "token_claims"
 )
 
@@ -35,7 +34,6 @@ type AuthMiddleware struct {
 	audience  string
 }
 
-// NewAuthMiddleware creates a new authentication middleware with JWT validation.
 func NewAuthMiddleware(secretKey, issuer, audience string) *AuthMiddleware {
 	if secretKey == "" {
 		panic("secretKey cannot be empty")
@@ -57,7 +55,6 @@ func NewAuthMiddleware(secretKey, issuer, audience string) *AuthMiddleware {
 	}
 }
 
-// validateJWTToken validates a JWT token and returns token claims.
 func (m *AuthMiddleware) validateJWTToken(ctx context.Context, tokenString string) (*auth.Claims, error) {
 	tokenString = strings.TrimPrefix(tokenString, "Bearer ")
 	tokenString = strings.TrimSpace(tokenString)
@@ -117,7 +114,6 @@ func (m *AuthMiddleware) validateJWTToken(ctx context.Context, tokenString strin
 	return tokenClaims, nil
 }
 
-// GetTokenClaims extracts token claims from the request context.
 func GetTokenClaims(ctx context.Context) *auth.Claims {
 	claims, ok := ctx.Value(TokenClaimsKey).(*auth.Claims)
 	if !ok {
@@ -126,7 +122,6 @@ func GetTokenClaims(ctx context.Context) *auth.Claims {
 	return claims
 }
 
-// RequireAuth is a middleware that requires valid authentication.
 func (m *AuthMiddleware) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := extractToken(r)
@@ -153,7 +148,6 @@ func (m *AuthMiddleware) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// OptionalAuth is a middleware that optionally validates authentication.
 func (m *AuthMiddleware) OptionalAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := extractToken(r)
@@ -173,7 +167,6 @@ func (m *AuthMiddleware) OptionalAuth(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// HasRole checks if the user in the context has any of the specified roles.
 func HasRole(ctx context.Context, roles ...string) bool {
 	claims := GetTokenClaims(ctx)
 	if claims == nil {
@@ -190,7 +183,6 @@ func HasRole(ctx context.Context, roles ...string) bool {
 	return false
 }
 
-// RequireRole is a middleware that requires the user to have one of the specified roles.
 func (m *AuthMiddleware) RequireRole(roles ...string) func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return m.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
@@ -223,7 +215,6 @@ func (m *AuthMiddleware) RequireRole(roles ...string) func(http.HandlerFunc) htt
 	}
 }
 
-// RequireAllRoles is a middleware that requires the user to have ALL of the specified roles.
 func (m *AuthMiddleware) RequireAllRoles(roles ...string) func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return m.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
@@ -252,12 +243,10 @@ func (m *AuthMiddleware) RequireAllRoles(roles ...string) func(http.HandlerFunc)
 	}
 }
 
-// RequireAnyRole is an alias for RequireRole for consistency
 func (m *AuthMiddleware) RequireAnyRole(roles ...string) func(http.HandlerFunc) http.HandlerFunc {
 	return m.RequireRole(roles...)
 }
 
-// RequireOwnershipOrRole is a middleware that requires the user to either own the resource or have one of the specified roles.
 func (m *AuthMiddleware) RequireOwnershipOrRole(ownerIDExtractor func(*http.Request) string, roles ...string) func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return m.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
@@ -296,7 +285,6 @@ func (m *AuthMiddleware) RequireOwnershipOrRole(ownerIDExtractor func(*http.Requ
 	}
 }
 
-// extractToken extracts the token from the request.
 func extractToken(r *http.Request) string {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader != "" {
@@ -305,7 +293,6 @@ func extractToken(r *http.Request) string {
 	return r.URL.Query().Get("token")
 }
 
-// contains checks if a string slice contains a specific string.
 func contains(slice []string, item string) bool {
 	for _, s := range slice {
 		if s == item {
@@ -315,21 +302,18 @@ func contains(slice []string, item string) bool {
 	return false
 }
 
-// writeErrorResponse writes an error response to the HTTP response writer.
 func writeErrorResponse(w http.ResponseWriter, message string, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	w.Write([]byte(`{"error":"` + message + `"}`))
 }
 
-// Constants for security headers and best practices
 const (
 	MaxTokenLength             = 4096
 	SecurityHeaderCacheControl = "no-cache, no-store, must-revalidate"
 	SecurityHeaderPragma       = "no-cache"
 )
 
-// validateTokenLength checks if the token length is within acceptable limits
 func validateTokenLength(token string) error {
 	if len(token) > MaxTokenLength {
 		return ErrInvalidToken

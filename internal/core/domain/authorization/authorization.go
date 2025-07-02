@@ -5,10 +5,10 @@ import (
 	"go_hex/internal/support/validation"
 )
 
-// Permission represents a specific action that can be performed in the system.
 type Permission string
 
-// Define domain permissions as constants
+type Role string
+
 const (
 	PermissionAddFriend    Permission = "add_friend"
 	PermissionViewFriend   Permission = "view_friend"
@@ -17,17 +17,12 @@ const (
 	PermissionGreet        Permission = "greet"
 )
 
-// Role represents a user role in the system.
-type Role string
-
-// Define domain roles as constants
 const (
 	RoleAdmin    Role = "admin"
 	RoleUser     Role = "user"
 	RoleReadOnly Role = "readonly"
 )
 
-// rolePermissions maps roles to their allowed permissions
 var rolePermissions = map[Role][]Permission{
 	RoleAdmin: {
 		PermissionAddFriend,
@@ -48,7 +43,6 @@ var rolePermissions = map[Role][]Permission{
 	},
 }
 
-// ParseRole converts a string to a Role enum.
 func ParseRole(roleStr string) Role {
 	switch roleStr {
 	case "admin":
@@ -62,7 +56,6 @@ func ParseRole(roleStr string) Role {
 	}
 }
 
-// GetPermissions returns the permissions associated with a role.
 func (r Role) GetPermissions() []Permission {
 	permissions, exists := rolePermissions[r]
 	if !exists {
@@ -71,7 +64,6 @@ func (r Role) GetPermissions() []Permission {
 	return permissions
 }
 
-// HasPermission checks if the role has a specific permission.
 func (r Role) HasPermission(permission Permission) bool {
 	permissions := r.GetPermissions()
 	for _, p := range permissions {
@@ -82,14 +74,12 @@ func (r Role) HasPermission(permission Permission) bool {
 	return false
 }
 
-// AuthorizationContext contains user information for authorization decisions.
 type AuthorizationContext struct {
 	UserID   string `json:"user_id" validate:"required,min=1"`
 	Username string `json:"username" validate:"required,min=2"`
 	Roles    []Role `json:"roles" validate:"required,min=1"`
 }
 
-// NewAuthorizationContext creates a new authorization context from string roles.
 func NewAuthorizationContext(userID, username string, roles []string) AuthorizationContext {
 	domainRoles := make([]Role, len(roles))
 	for i, roleStr := range roles {
@@ -103,7 +93,6 @@ func NewAuthorizationContext(userID, username string, roles []string) Authorizat
 	}
 }
 
-// HasPermission checks if the authorization context has a specific permission.
 func (ac AuthorizationContext) HasPermission(permission Permission) bool {
 	for _, role := range ac.Roles {
 		if role.HasPermission(permission) {
@@ -113,7 +102,6 @@ func (ac AuthorizationContext) HasPermission(permission Permission) bool {
 	return false
 }
 
-// HasRole checks if the authorization context has a specific role.
 func (ac AuthorizationContext) HasRole(role Role) bool {
 	for _, r := range ac.Roles {
 		if r == role {
@@ -123,12 +111,10 @@ func (ac AuthorizationContext) HasRole(role Role) bool {
 	return false
 }
 
-// IsAdmin checks if the authorization context has admin privileges.
 func (ac AuthorizationContext) IsAdmin() bool {
 	return ac.HasRole(RoleAdmin)
 }
 
-// Validate validates the authorization context using the domain validation rules.
 func (ac AuthorizationContext) Validate() error {
 	if err := validation.Validate(ac); err != nil {
 		return shared.NewDomainValidationError("invalid authorization context", err)

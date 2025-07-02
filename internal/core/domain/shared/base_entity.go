@@ -42,7 +42,6 @@ func (b *BaseEntity[T]) Touch() {
 	b.UpdatedAt = time.Now()
 }
 
-// AddEvent adds a domain event to the internal event queue
 func (b *BaseEntity[T]) AddEvent(event DomainEvent) {
 	if b.events == nil {
 		b.events = make([]DomainEvent, 0)
@@ -50,12 +49,10 @@ func (b *BaseEntity[T]) AddEvent(event DomainEvent) {
 	b.events = append(b.events, event)
 }
 
-// GetEvents returns all queued domain events
 func (b *BaseEntity[T]) GetEvents() []DomainEvent {
 	return b.events
 }
 
-// ClearEvents removes all queued domain events
 func (b *BaseEntity[T]) ClearEvents() {
 	b.events = nil
 }

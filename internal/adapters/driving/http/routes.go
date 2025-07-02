@@ -5,7 +5,6 @@ import (
 	"net/http"
 )
 
-// RegisterRoutes registers HTTP routes for the Handler.
 func RegisterRoutes(mux *http.ServeMux, handler *Handler) {
 	// Public endpoints (no authentication required)
 	mux.HandleFunc("/health", handler.HealthCheck)

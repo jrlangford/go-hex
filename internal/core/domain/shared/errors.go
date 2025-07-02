@@ -7,7 +7,6 @@ type DomainValidationError struct {
 	errors.BaseError
 }
 
-// NewDomainValidationError creates a new validation error with optional cause
 func NewDomainValidationError(message string, cause error) DomainValidationError {
 	return DomainValidationError{
 		BaseError: errors.NewBaseError(message, cause),

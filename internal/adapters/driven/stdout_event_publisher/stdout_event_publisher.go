@@ -24,5 +24,4 @@ func (p *StdoutEventPublisher) Publish(event shared.DomainEvent) error {
 	return nil
 }
 
-// Ensure StdoutEventPublisher implements EventPublisher interface.
 var _ secondary.EventPublisher = (*StdoutEventPublisher)(nil)

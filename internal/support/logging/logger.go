@@ -6,10 +6,8 @@ import (
 	"os"
 )
 
-// Logger is a global logger instance.
 var Logger *slog.Logger
 
-// Initialize sets up the global logger based on configuration.
 func Initialize(cfg *config.Config) {
 	var level slog.Level
 	switch cfg.LogLevel {
@@ -31,10 +29,8 @@ func Initialize(cfg *config.Config) {
 
 	var handler slog.Handler
 	if cfg.IsProduction() {
-		// JSON logging for production
 		handler = slog.NewJSONHandler(os.Stdout, opts)
 	} else {
-		// Text logging for development
 		handler = slog.NewTextHandler(os.Stdout, opts)
 	}
 
@@ -42,10 +38,8 @@ func Initialize(cfg *config.Config) {
 	slog.SetDefault(Logger)
 }
 
-// Get returns the current logger instance.
 func Get() *slog.Logger {
 	if Logger == nil {
-		// Fallback to default logger if not initialized
 		return slog.Default()
 	}
 	return Logger

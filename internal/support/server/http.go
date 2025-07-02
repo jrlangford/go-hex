@@ -13,14 +13,12 @@ import (
 	"time"
 )
 
-// HTTPServer manages the HTTP server lifecycle.
 type HTTPServer struct {
 	server  *http.Server
 	config  *config.Config
 	handler *httpadapter.Handler
 }
 
-// New creates a new HTTP server instance.
 func New(cfg *config.Config, handler *httpadapter.Handler) *HTTPServer {
 	mux := http.NewServeMux()
 	httpadapter.RegisterRoutes(mux, handler)
@@ -37,11 +35,9 @@ func New(cfg *config.Config, handler *httpadapter.Handler) *HTTPServer {
 	}
 }
 
-// Start starts the HTTP server and handles graceful shutdown.
 func (s *HTTPServer) Start() error {
 	logger := logging.Get()
 
-	// Start server in a goroutine
 	go func() {
 		logger.Info("Starting HTTP server", "port", s.config.Port)
 		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -50,13 +46,11 @@ func (s *HTTPServer) Start() error {
 		}
 	}()
 
-	// Wait for interrupt signal to gracefully shutdown the server
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	logger.Info("Shutting down server...")
 
-	// Give outstanding requests 30 seconds to complete
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 

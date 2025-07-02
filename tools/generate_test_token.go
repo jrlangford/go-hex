@@ -9,7 +9,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// JWTClaims represents JWT claims structure that implements jwt.Claims interface.
 type JWTClaims struct {
 	UserID   string            `json:"sub"`
 	Username string            `json:"username"`

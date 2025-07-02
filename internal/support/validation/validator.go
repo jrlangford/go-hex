@@ -9,7 +9,6 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-// Validator wraps the go-playground validator with domain-specific functionality.
 type Validator struct {
 	validate *validator.Validate
 }
@@ -19,8 +18,6 @@ var (
 	validatorOnce     sync.Once
 )
 
-// GetValidator returns a singleton instance of the validator.
-// This ensures that the validator's internal cache is reused effectively across the application.
 func GetValidator() *Validator {
 	validatorOnce.Do(func() {
 		validatorInstance = New()
@@ -28,18 +25,9 @@ func GetValidator() *Validator {
 	return validatorInstance
 }
 
-// New creates a new validator instance with custom validation rules.
-//
-// NOTE: For better performance, prefer using GetValidator() or the global validation functions
-// (Validate, ValidateVar) which reuse a singleton validator instance and
-// leverage the validator library's internal cache effectively.
-//
-// Only use this function directly if you need a separate validator instance
-// with different configuration (e.g., in testing scenarios).
 func New() *Validator {
 	validate := validator.New()
 
-	// Register custom tag name function to use json tags for field names
 	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
 		name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
 		if name == "-" {
@@ -51,7 +39,6 @@ func New() *Validator {
 		return name
 	})
 
-	// Register custom validators
 	validate.RegisterValidation("friend_name", validateFriendName)
 	validate.RegisterValidation("role", validateRole)
 	validate.RegisterValidation("permission", validatePermission)
@@ -66,14 +53,12 @@ func New() *Validator {
 	}
 }
 
-// Validate validates a struct using the annotation-based rules.
 func (v *Validator) Validate(s interface{}) error {
 	err := v.validate.Struct(s)
 	if err == nil {
 		return nil
 	}
 
-	// Convert validation errors to domain-friendly format
 	var validationErrors []string
 	for _, err := range err.(validator.ValidationErrors) {
 		validationErrors = append(validationErrors, formatValidationError(err))
@@ -82,12 +67,10 @@ func (v *Validator) Validate(s interface{}) error {
 	return fmt.Errorf("validation failed: %s", strings.Join(validationErrors, "; "))
 }
 
-// ValidateVar validates a single variable using validation rules.
 func (v *Validator) ValidateVar(field interface{}, tag string) error {
 	return v.validate.Var(field, tag)
 }
 
-// formatValidationError formats a validation error in a user-friendly way.
 func formatValidationError(err validator.FieldError) string {
 	switch err.Tag() {
 	case "required":
@@ -127,7 +110,6 @@ func formatValidationError(err validator.FieldError) string {
 
 // Custom validation functions
 
-// validateFriendName validates friend names according to business rules.
 func validateFriendName(fl validator.FieldLevel) bool {
 	name := strings.TrimSpace(fl.Field().String())
 	if len(name) < 2 || len(name) > 100 {
@@ -144,7 +126,6 @@ func validateFriendName(fl validator.FieldLevel) bool {
 	return true
 }
 
-// validateRole validates role values.
 func validateRole(fl validator.FieldLevel) bool {
 	role := fl.Field().String()
 	validRoles := []string{"admin", "user", "readonly"}
@@ -157,7 +138,6 @@ func validateRole(fl validator.FieldLevel) bool {
 	return false
 }
 
-// validatePermission validates permission values.
 func validatePermission(fl validator.FieldLevel) bool {
 	permission := fl.Field().String()
 	validPermissions := []string{"add_friend", "view_friend", "update_friend", "delete_friend", "greet"}
@@ -170,7 +150,6 @@ func validatePermission(fl validator.FieldLevel) bool {
 	return false
 }
 
-// validateEnvironment validates environment values.
 func validateEnvironment(fl validator.FieldLevel) bool {
 	env := fl.Field().String()
 	validEnvs := []string{"development", "staging", "production"}
@@ -183,7 +162,6 @@ func validateEnvironment(fl validator.FieldLevel) bool {
 	return false
 }
 
-// validateLogLevel validates log level values.
 func validateLogLevel(fl validator.FieldLevel) bool {
 	level := fl.Field().String()
 	validLevels := []string{"debug", "info", "warn", "error"}
@@ -196,7 +174,6 @@ func validateLogLevel(fl validator.FieldLevel) bool {
 	return false
 }
 
-// validatePhoneNumber validates phone number format.
 func validatePhoneNumber(fl validator.FieldLevel) bool {
 	phone := strings.TrimSpace(fl.Field().String())
 	if phone == "" {
@@ -226,7 +203,6 @@ func validatePhoneNumber(fl validator.FieldLevel) bool {
 	return digitCount >= 10 && digitCount <= 15
 }
 
-// validatePostalCode validates postal code format.
 func validatePostalCode(fl validator.FieldLevel) bool {
 	postalCode := strings.TrimSpace(fl.Field().String())
 	if len(postalCode) < 5 || len(postalCode) > 10 {
@@ -246,7 +222,6 @@ func validatePostalCode(fl validator.FieldLevel) bool {
 	return true
 }
 
-// validateCurrency validates ISO 4217 currency codes.
 func validateCurrency(fl validator.FieldLevel) bool {
 	currency := strings.ToUpper(strings.TrimSpace(fl.Field().String()))
 
@@ -267,14 +242,10 @@ func validateCurrency(fl validator.FieldLevel) bool {
 
 // Global convenience functions
 
-// Validate validates a struct using the global singleton validator instance.
-// This function reuses the cached validator instance for optimal performance.
 func Validate(obj interface{}) error {
 	return GetValidator().Validate(obj)
 }
 
-// ValidateVar validates a single variable using the global singleton validator instance.
-// This function reuses the cached validator instance for optimal performance.
 func ValidateVar(field interface{}, tag string) error {
 	return GetValidator().ValidateVar(field, tag)
 }

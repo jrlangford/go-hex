@@ -12,11 +12,9 @@ type FriendDTO struct {
 }
 
 func (f FriendDTO) ToDomain() (friendship.FriendData, error) {
-	// Validate the DTO using annotation-based validation
 	if err := validation.Validate(f); err != nil {
 		return friendship.FriendData{}, err
 	}
-
 	return friendship.NewFriendData(f.Name, f.Title)
 }
 
