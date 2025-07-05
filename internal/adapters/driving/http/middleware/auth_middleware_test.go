@@ -277,7 +277,7 @@ func TestGetTokenClaims(t *testing.T) {
 			t.Fatalf("Failed to create claims: %v", err)
 		}
 
-		ctx := context.WithValue(context.Background(), TokenClaimsKey, claims)
+		ctx := context.WithValue(context.Background(), auth.ClaimsContextKey, claims)
 
 		retrievedClaims := GetTokenClaims(ctx)
 		if retrievedClaims == nil {
@@ -312,7 +312,7 @@ func TestHasRole(t *testing.T) {
 		t.Fatalf("Failed to create claims: %v", err)
 	}
 
-	ctx := context.WithValue(context.Background(), TokenClaimsKey, claims)
+	ctx := context.WithValue(context.Background(), auth.ClaimsContextKey, claims)
 
 	t.Run("User has role", func(t *testing.T) {
 		if !HasRole(ctx, "user") {

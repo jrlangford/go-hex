@@ -3,12 +3,43 @@ package http
 import (
 	"encoding/json"
 	"go_hex/internal/adapters/driving/http/middleware"
-	"go_hex/internal/core/domain/friendship"
-	"go_hex/internal/core/ports/primary"
+	bookingApp "go_hex/internal/core/booking/application"
+	bookingDomain "go_hex/internal/core/booking/domain"
+	handlingDomain "go_hex/internal/core/handling/domain"
+	handlingPrimary "go_hex/internal/core/handling/ports/primary"
+	routingApp "go_hex/internal/core/routing/application"
+	routingDomain "go_hex/internal/core/routing/domain"
+	"go_hex/internal/support/validation"
 	"net/http"
-
-	"github.com/google/uuid"
+	"strings"
+	"time"
 )
+
+// Handler is the main HTTP handler for the cargo shipping application.
+type Handler struct {
+	authMiddleware        *middleware.AuthMiddleware
+	bookingService        *bookingApp.BookingApplicationService
+	routingService        *routingApp.RoutingApplicationService
+	handlingReportService handlingPrimary.HandlingReportService
+	handlingQueryService  handlingPrimary.HandlingEventQueryService
+}
+
+// NewHandler creates a new HTTP handler with the given services and middleware.
+func NewHandler(
+	authMiddleware *middleware.AuthMiddleware,
+	bookingService *bookingApp.BookingApplicationService,
+	routingService *routingApp.RoutingApplicationService,
+	handlingReportService handlingPrimary.HandlingReportService,
+	handlingQueryService handlingPrimary.HandlingEventQueryService,
+) *Handler {
+	return &Handler{
+		authMiddleware:        authMiddleware,
+		bookingService:        bookingService,
+		routingService:        routingService,
+		handlingReportService: handlingReportService,
+		handlingQueryService:  handlingQueryService,
+	}
+}
 
 // ErrorResponse represents a JSON error response.
 type ErrorResponse struct {
@@ -23,6 +54,26 @@ type SuccessResponse struct {
 	Data   interface{} `json:"data,omitempty"`
 }
 
+// writeErrorResponse is a helper to write standardized error responses
+func (h *Handler) writeErrorResponse(w http.ResponseWriter, errorCode, message string, httpStatus int) {
+	w.WriteHeader(httpStatus)
+	errorResponse := ErrorResponse{
+		Error:   errorCode,
+		Message: message,
+		Code:    httpStatus,
+	}
+	json.NewEncoder(w).Encode(errorResponse)
+}
+
+// extractTrackingIdFromPath extracts tracking ID from URL path
+func (h *Handler) extractTrackingIdFromPath(path string) string {
+	parts := strings.Split(path, "/")
+	if len(parts) > 0 {
+		return parts[len(parts)-1]
+	}
+	return ""
+}
+
 // HealthResponse represents a health check response.
 type HealthResponse struct {
 	Status  string            `json:"status"`
@@ -30,270 +81,450 @@ type HealthResponse struct {
 	Checks  map[string]string `json:"checks"`
 }
 
-func writeErrorResponse(w http.ResponseWriter, message string, code int) {
+// HealthHandler handles health check requests.
+func (h *Handler) HealthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
 
-	errorResp := ErrorResponse{
-		Error:   http.StatusText(code),
-		Message: message,
-		Code:    code,
+	healthResponse := HealthResponse{
+		Status:  "OK",
+		Service: "Cargo Shipping System",
+		Checks: map[string]string{
+			"api":      "OK",
+			"database": "OK", // Placeholder
+		},
 	}
 
-	json.NewEncoder(w).Encode(errorResp)
+	if err := json.NewEncoder(w).Encode(healthResponse); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
-func writeSuccessResponse(w http.ResponseWriter, data interface{}, code int) {
+// DefaultHandler handles requests to undefined routes.
+func (h *Handler) DefaultHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
+	w.WriteHeader(http.StatusNotFound)
 
-	successResp := SuccessResponse{
+	errorResponse := ErrorResponse{
+		Error:   "Not Found",
+		Message: "The requested resource was not found",
+		Code:    http.StatusNotFound,
+	}
+
+	json.NewEncoder(w).Encode(errorResponse)
+}
+
+// InfoHandler provides information about the cargo shipping system.
+func (h *Handler) InfoHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	response := SuccessResponse{
 		Status: "success",
-		Data:   data,
+		Data: map[string]interface{}{
+			"application": "Cargo Shipping System",
+			"version":     "1.0.0",
+			"description": "A DDD-based cargo shipping system with Booking, Routing, and Handling contexts",
+			"contexts": []string{
+				"booking",
+				"routing",
+				"handling",
+			},
+		},
 	}
 
-	json.NewEncoder(w).Encode(successResp)
+	json.NewEncoder(w).Encode(response)
 }
 
-type Handler struct {
-	service        primary.Greeter
-	healthChecker  primary.HealthChecker
-	authMiddleware *middleware.AuthMiddleware
+// BookCargoHandler handles cargo booking requests.
+func (h *Handler) BookCargoHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Parse request body
+	var req BookCargoRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, "invalid_request", "Invalid JSON format", http.StatusBadRequest)
+		return
+	}
+
+	// Validate request
+	if err := validation.Validate(req); err != nil {
+		h.writeErrorResponse(w, "validation_error", err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Book cargo
+	cargo, err := h.bookingService.BookNewCargo(r.Context(), req.Origin, req.Destination, req.ArrivalDeadline)
+	if err != nil {
+		h.writeErrorResponse(w, "booking_failed", err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return response
+	response := BookCargoToResponse(cargo)
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(SuccessResponse{
+		Status: "success",
+		Data:   response,
+	})
 }
 
-func NewHandler(service primary.Greeter, healthChecker primary.HealthChecker, authMiddleware *middleware.AuthMiddleware) *Handler {
-	return &Handler{
-		service:        service,
-		healthChecker:  healthChecker,
-		authMiddleware: authMiddleware,
+// TrackCargoHandler handles cargo tracking requests.
+func (h *Handler) TrackCargoHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Extract tracking ID from URL path
+	trackingIdStr := h.extractTrackingIdFromPath(r.URL.Path)
+	if trackingIdStr == "" {
+		h.writeErrorResponse(w, "invalid_request", "Tracking ID is required", http.StatusBadRequest)
+		return
 	}
+
+	// Parse tracking ID
+	trackingId, err := bookingDomain.TrackingIdFromString(trackingIdStr)
+	if err != nil {
+		h.writeErrorResponse(w, "invalid_tracking_id", "Invalid tracking ID format", http.StatusBadRequest)
+		return
+	}
+
+	// Get cargo details
+	cargo, err := h.bookingService.GetCargoDetails(r.Context(), trackingId)
+	if err != nil {
+		h.writeErrorResponse(w, "cargo_not_found", "Cargo not found", http.StatusNotFound)
+		return
+	}
+
+	// Return response
+	response := CargoToResponse(cargo)
+	json.NewEncoder(w).Encode(SuccessResponse{
+		Status: "success",
+		Data:   response,
+	})
 }
 
-func (h *Handler) AddFriend(w http.ResponseWriter, r *http.Request) {
-	var friendDTO FriendDTO
-	if err := json.NewDecoder(r.Body).Decode(&friendDTO); err != nil {
-		writeErrorResponse(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+// RequestRouteCandidatesHandler handles route candidate requests.
+func (h *Handler) RequestRouteCandidatesHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Extract tracking ID from URL path
+	trackingIdStr := h.extractTrackingIdFromPath(r.URL.Path)
+	if trackingIdStr == "" {
+		h.writeErrorResponse(w, "invalid_request", "Tracking ID is required", http.StatusBadRequest)
 		return
 	}
 
-	friendData, err := friendDTO.ToDomain()
+	// Parse tracking ID
+	trackingId, err := bookingDomain.TrackingIdFromString(trackingIdStr)
 	if err != nil {
-		writeErrorResponse(w, "Invalid friend data: "+err.Error(), http.StatusBadRequest)
+		h.writeErrorResponse(w, "invalid_tracking_id", "Invalid tracking ID format", http.StatusBadRequest)
 		return
 	}
 
-	friend, err := h.service.AddFriend(r.Context(), friendData)
+	// Get route candidates
+	candidates, err := h.bookingService.RequestRouteCandidates(r.Context(), trackingId)
 	if err != nil {
-		writeErrorResponse(w, "Failed to add friend: "+err.Error(), http.StatusInternalServerError)
+		h.writeErrorResponse(w, "route_search_failed", err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	responseDTO := NewFriendDTOFromDomain(friend)
-	writeSuccessResponse(w, responseDTO, http.StatusCreated)
+	// Convert to DTOs
+	routes := make([]ItineraryDTO, len(candidates))
+	for i, candidate := range candidates {
+		routes[i] = *ItineraryToDTO(candidate)
+	}
+
+	// Return response
+	response := RouteCandidatesResponse{
+		TrackingId: trackingIdStr,
+		Routes:     routes,
+	}
+
+	json.NewEncoder(w).Encode(SuccessResponse{
+		Status: "success",
+		Data:   response,
+	})
 }
 
-func (h *Handler) Greet(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
-	uuid, err := uuid.Parse(id)
-	if err != nil {
-		writeErrorResponse(w, "Invalid friend ID: "+err.Error(), http.StatusBadRequest)
+// SubmitHandlingReportHandler handles handling report submissions.
+func (h *Handler) SubmitHandlingReportHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Parse request body
+	var req HandlingEventRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, "invalid_request", "Invalid JSON format", http.StatusBadRequest)
 		return
 	}
 
-	greeting, err := h.service.Greet(r.Context(), friendship.NewFriendID(uuid))
-	if err != nil {
-		writeErrorResponse(w, "Friend not found: "+err.Error(), http.StatusNotFound)
+	// Validate request
+	if err := validation.Validate(req); err != nil {
+		h.writeErrorResponse(w, "validation_error", err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Check if request is authenticated for enhanced greeting
-	claims := middleware.GetTokenClaims(r.Context())
-	response := map[string]interface{}{
-		"greeting": greeting,
+	// Validate tracking ID format
+	_, err := bookingDomain.TrackingIdFromString(req.TrackingId)
+	if err != nil {
+		h.writeErrorResponse(w, "invalid_tracking_id", "Invalid tracking ID format", http.StatusBadRequest)
+		return
 	}
 
-	if claims != nil {
-		response["authenticated"] = true
-		response["greeted_by"] = claims.Username
+	// Validate completion time format
+	_, err = time.Parse(time.RFC3339, req.CompletionTime)
+	if err != nil {
+		h.writeErrorResponse(w, "invalid_time", "Invalid completion time format, expected RFC3339", http.StatusBadRequest)
+		return
+	}
 
-		// Add personalized message if greeting own profile
-		if claims.UserID == id {
-			response["personal_note"] = "This is your own profile!"
+	// Submit handling report
+	report := handlingPrimary.HandlingReport{
+		TrackingId:     req.TrackingId,
+		EventType:      req.EventType,
+		Location:       req.Location,
+		VoyageNumber:   req.VoyageNumber,
+		CompletionTime: req.CompletionTime,
+	}
+
+	err = h.handlingReportService.SubmitHandlingReport(r.Context(), report)
+	if err != nil {
+		h.writeErrorResponse(w, "handling_report_failed", err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Create response
+	response := HandlingEventResponse{
+		EventId:        "", // We don't get the event ID back from this interface
+		TrackingId:     req.TrackingId,
+		EventType:      req.EventType,
+		Location:       req.Location,
+		VoyageNumber:   req.VoyageNumber,
+		CompletionTime: req.CompletionTime,
+		RegisteredAt:   time.Now().Format(time.RFC3339),
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(SuccessResponse{
+		Status: "success",
+		Data:   response,
+	})
+}
+
+// AssignRouteHandler handles route assignment to cargo.
+func (h *Handler) AssignRouteHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Extract tracking ID from URL path
+	trackingIdStr := h.extractTrackingIdFromPath(r.URL.Path)
+	if trackingIdStr == "" {
+		h.writeErrorResponse(w, "invalid_request", "Tracking ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Parse request body
+	var req AssignRouteRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, "invalid_request", "Invalid JSON format", http.StatusBadRequest)
+		return
+	}
+
+	// Validate request
+	if err := validation.Validate(req); err != nil {
+		h.writeErrorResponse(w, "validation_error", err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Parse tracking ID (validate format)
+	_, err := bookingDomain.TrackingIdFromString(trackingIdStr)
+	if err != nil {
+		h.writeErrorResponse(w, "invalid_tracking_id", "Invalid tracking ID format", http.StatusBadRequest)
+		return
+	}
+
+	// TODO: For now, we'll return success but the actual itinerary creation
+	// would require getting the route candidate by ID and converting it to an Itinerary
+	// This would typically involve the routing service
+	h.writeErrorResponse(w, "not_implemented", "Route assignment not fully implemented", http.StatusNotImplemented)
+}
+
+// ListCargoHandler handles listing all cargo.
+func (h *Handler) ListCargoHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Get unrouted cargo (for simplicity, we'll just return unrouted cargo)
+	cargoList, err := h.bookingService.ListUnroutedCargo(r.Context())
+	if err != nil {
+		h.writeErrorResponse(w, "list_failed", err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Convert to responses
+	responses := make([]CargoDetailsResponse, len(cargoList))
+	for i, cargo := range cargoList {
+		responses[i] = CargoToResponse(cargo)
+	}
+
+	json.NewEncoder(w).Encode(SuccessResponse{
+		Status: "success",
+		Data:   responses,
+	})
+}
+
+// ListVoyagesHandler handles GET /api/v1/voyages
+func (h *Handler) ListVoyagesHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Get all voyages from the routing service
+	voyages, err := h.routingService.ListAllVoyages(r.Context())
+	if err != nil {
+		h.writeErrorResponse(w, "INTERNAL_ERROR", "Failed to list voyages", http.StatusInternalServerError)
+		return
+	}
+
+	// Convert voyages to response format
+	voyageResponses := make([]VoyageResponse, len(voyages))
+	for i, voyage := range voyages {
+		voyageResponses[i] = VoyageToResponse(voyage)
+	}
+
+	json.NewEncoder(w).Encode(SuccessResponse{
+		Status: "success",
+		Data:   voyageResponses,
+	})
+}
+
+// ListLocationsHandler handles GET /api/v1/locations
+func (h *Handler) ListLocationsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Get all locations from the routing service
+	locations, err := h.routingService.ListAllLocations(r.Context())
+	if err != nil {
+		h.writeErrorResponse(w, "INTERNAL_ERROR", "Failed to list locations", http.StatusInternalServerError)
+		return
+	}
+
+	// Convert locations to response format
+	locationResponses := make([]LocationResponse, len(locations))
+	for i, location := range locations {
+		locationResponses[i] = LocationToResponse(location)
+	}
+
+	json.NewEncoder(w).Encode(SuccessResponse{
+		Status: "success",
+		Data:   locationResponses,
+	})
+}
+
+// ListHandlingEventsHandler handles GET /api/v1/handling-events
+func (h *Handler) ListHandlingEventsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Check for tracking_id query parameter
+	trackingID := r.URL.Query().Get("tracking_id")
+
+	var events []HandlingEventResponse
+
+	if trackingID != "" {
+		// Get events for specific cargo
+		handlingHistory, queryErr := h.handlingQueryService.GetHandlingHistory(r.Context(), trackingID)
+		if queryErr != nil {
+			h.writeErrorResponse(w, "INTERNAL_ERROR", "Failed to get handling events", http.StatusInternalServerError)
+			return
+		}
+
+		// Convert handling history to response format
+		events = make([]HandlingEventResponse, len(handlingHistory.Events))
+		for i, event := range handlingHistory.Events {
+			events[i] = HandlingEventToResponse(event)
 		}
 	} else {
-		response["authenticated"] = false
-	}
+		// Get all events using the new method
+		allEvents, queryErr := h.handlingQueryService.ListAllHandlingEvents(r.Context())
+		if queryErr != nil {
+			h.writeErrorResponse(w, "INTERNAL_ERROR", "Failed to list all handling events", http.StatusInternalServerError)
+			return
+		}
 
-	writeSuccessResponse(w, response, http.StatusOK)
-}
-
-func (h *Handler) GetAllFriends(w http.ResponseWriter, r *http.Request) {
-	friends, err := h.service.GetAllFriends(r.Context())
-	if err != nil {
-		writeErrorResponse(w, "Failed to retrieve friends: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Convert domain friends to DTOs
-	friendDTOs := make([]FriendDTO, 0, len(friends))
-	for _, friend := range friends {
-		friendDTOs = append(friendDTOs, NewFriendDTOFromDomain(friend))
-	}
-
-	writeSuccessResponse(w, friendDTOs, http.StatusOK)
-}
-
-func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	healthData, err := h.healthChecker.CheckHealth(r.Context())
-	if err != nil {
-		writeErrorResponse(w, "Health check failed: "+err.Error(), http.StatusServiceUnavailable)
-		return
-	}
-
-	// Determine overall status
-	status := healthData["status"]
-	code := http.StatusOK
-	if status != "healthy" {
-		code = http.StatusServiceUnavailable
-	}
-
-	// Remove status from checks to avoid duplication
-	checks := make(map[string]string)
-	for k, v := range healthData {
-		if k != "status" && k != "service" {
-			checks[k] = v
+		events = make([]HandlingEventResponse, len(allEvents))
+		for i, event := range allEvents {
+			events[i] = HandlingEventToResponse(event)
 		}
 	}
 
-	healthResp := HealthResponse{
-		Status:  status,
-		Service: healthData["service"],
-		Checks:  checks,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(healthResp)
+	json.NewEncoder(w).Encode(SuccessResponse{
+		Status: "success",
+		Data:   events,
+	})
 }
 
-func (h *Handler) GetFriend(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	if id == "" {
-		writeErrorResponse(w, "Friend ID is required", http.StatusBadRequest)
-		return
+// Conversion functions for response types
+
+func VoyageToResponse(voyage interface{}) VoyageResponse {
+	// Type assert to proper domain type
+	if v, ok := voyage.(routingDomain.Voyage); ok {
+		schedule := v.GetSchedule()
+		legs := make([]LegDTO, len(schedule.Movements))
+
+		for i, movement := range schedule.Movements {
+			legs[i] = LegDTO{
+				VoyageNumber:   v.GetVoyageNumber().String(),
+				LoadLocation:   movement.DepartureLocation.String(),
+				UnloadLocation: movement.ArrivalLocation.String(),
+				LoadTime:       movement.DepartureTime.Format(time.RFC3339),
+				UnloadTime:     movement.ArrivalTime.Format(time.RFC3339),
+			}
+		}
+
+		return VoyageResponse{
+			VoyageNumber: v.GetVoyageNumber().String(),
+			Schedule:     legs,
+		}
 	}
 
-	friendUUID, err := uuid.Parse(id)
-	if err != nil {
-		writeErrorResponse(w, "Invalid friend ID format: "+err.Error(), http.StatusBadRequest)
-		return
+	// Fallback for interface{} parameter
+	return VoyageResponse{
+		VoyageNumber: "UNKNOWN",
+		Schedule:     []LegDTO{},
 	}
-
-	friend, err := h.service.GetFriend(r.Context(), friendship.NewFriendID(friendUUID))
-	if err != nil {
-		writeErrorResponse(w, "Friend not found: "+err.Error(), http.StatusNotFound)
-		return
-	}
-
-	responseDTO := NewFriendDTOFromDomain(friend)
-	writeSuccessResponse(w, responseDTO, http.StatusOK)
 }
 
-func (h *Handler) UpdateFriend(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	if id == "" {
-		writeErrorResponse(w, "Friend ID is required", http.StatusBadRequest)
-		return
+func LocationToResponse(location interface{}) LocationResponse {
+	// Type assert to proper domain type
+	if l, ok := location.(routingDomain.Location); ok {
+		return LocationResponse{
+			Code: l.GetUnLocode().String(),
+			Name: l.GetName(),
+		}
 	}
 
-	friendUUID, err := uuid.Parse(id)
-	if err != nil {
-		writeErrorResponse(w, "Invalid friend ID format: "+err.Error(), http.StatusBadRequest)
-		return
+	// Fallback for interface{} parameter
+	return LocationResponse{
+		Code: "UNKNOWN",
+		Name: "Unknown Location",
 	}
-
-	// Check if user can update this resource (admin or owner)
-	if !h.isOwnerOrAdmin(r, id) {
-		writeErrorResponse(w, "Insufficient permissions to update this friend", http.StatusForbidden)
-		return
-	}
-
-	var friendDTO FriendDTO
-	if err := json.NewDecoder(r.Body).Decode(&friendDTO); err != nil {
-		writeErrorResponse(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	friendData, err := friendDTO.ToDomain()
-	if err != nil {
-		writeErrorResponse(w, "Invalid friend data: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	friend, err := h.service.UpdateFriend(r.Context(), friendship.NewFriendID(friendUUID), friendData)
-	if err != nil {
-		writeErrorResponse(w, "Failed to update friend: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	responseDTO := NewFriendDTOFromDomain(friend)
-	writeSuccessResponse(w, responseDTO, http.StatusOK)
 }
 
-func (h *Handler) DeleteFriend(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	if id == "" {
-		writeErrorResponse(w, "Friend ID is required", http.StatusBadRequest)
-		return
+func HandlingEventToResponse(event interface{}) HandlingEventResponse {
+	// Type assert to proper domain type
+	if e, ok := event.(handlingDomain.HandlingEvent); ok {
+		return HandlingEventResponse{
+			EventId:        e.GetEventId().String(),
+			TrackingId:     e.GetTrackingId(),
+			EventType:      string(e.GetEventType()),
+			Location:       e.GetLocation(),
+			VoyageNumber:   e.GetVoyageNumber(),
+			CompletionTime: e.GetCompletionTime().Format(time.RFC3339),
+			RegisteredAt:   e.GetRegistrationTime().Format(time.RFC3339),
+		}
 	}
 
-	friendUUID, err := uuid.Parse(id)
-	if err != nil {
-		writeErrorResponse(w, "Invalid friend ID format: "+err.Error(), http.StatusBadRequest)
-		return
+	// Fallback for interface{} parameter
+	return HandlingEventResponse{
+		EventId:        "unknown",
+		TrackingId:     "unknown",
+		EventType:      "UNKNOWN",
+		Location:       "unknown",
+		VoyageNumber:   "",
+		CompletionTime: time.Now().Format(time.RFC3339),
+		RegisteredAt:   time.Now().Format(time.RFC3339),
 	}
-
-	err = h.service.DeleteFriend(r.Context(), friendship.NewFriendID(friendUUID))
-	if err != nil {
-		writeErrorResponse(w, "Failed to delete friend: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	successResp := map[string]string{"message": "Friend deleted successfully"}
-	writeSuccessResponse(w, successResp, http.StatusOK)
-}
-
-// isOwnerOrAdmin checks if the authenticated user is the owner of the resource or has admin role.
-func (h *Handler) isOwnerOrAdmin(r *http.Request, userID string) bool {
-	claims := middleware.GetTokenClaims(r.Context())
-	if claims == nil {
-		return false
-	}
-
-	// Check if user is admin
-	if claims.IsAuthorized("admin") {
-		return true
-	}
-
-	// Check if user is the owner
-	return claims.UserID == userID
-}
-
-// WhoAmI returns information about the currently authenticated user.
-func (h *Handler) WhoAmI(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetTokenClaims(r.Context())
-	if claims == nil {
-		writeErrorResponse(w, "Authentication required", http.StatusUnauthorized)
-		return
-	}
-
-	userInfo := map[string]interface{}{
-		"user_id":  claims.UserID,
-		"username": claims.Username,
-		"email":    claims.Email,
-		"roles":    claims.Roles,
-		"metadata": claims.Metadata,
-	}
-
-	writeSuccessResponse(w, userInfo, http.StatusOK)
 }

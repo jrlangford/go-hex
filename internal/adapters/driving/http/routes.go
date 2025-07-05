@@ -3,58 +3,166 @@ package http
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 )
 
 func RegisterRoutes(mux *http.ServeMux, handler *Handler) {
 	// Public endpoints (no authentication required)
-	mux.HandleFunc("/health", handler.HealthCheck)
+	mux.HandleFunc("/health", handler.HealthHandler)
+	mux.HandleFunc("/info", handler.InfoHandler)
 
-	// Protected endpoints (authentication required)
-	mux.HandleFunc("/friends", func(w http.ResponseWriter, r *http.Request) {
+	// Cargo Booking Context endpoints - REST compliant
+	// GET/POST /api/v1/cargos - list/create cargo
+	mux.HandleFunc("/api/v1/cargos", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
-			// Creating friends requires admin role
-			handler.authMiddleware.RequireRole("admin")(handler.AddFriend)(w, r)
+			handler.authMiddleware.RequireAuth(handler.BookCargoHandler)(w, r)
 		case http.MethodGet:
-			// Reading all friends requires authentication (any role)
-			handler.authMiddleware.RequireAuth(handler.GetAllFriends)(w, r)
+			handler.authMiddleware.RequireAuth(handler.ListCargoHandler)(w, r)
 		default:
 			writeMethodNotAllowedError(w)
 		}
 	})
 
-	mux.HandleFunc("/friends/{id}", func(w http.ResponseWriter, r *http.Request) {
+	// GET /api/v1/cargos/{trackingId} - get specific cargo
+	// PUT /api/v1/cargos/{trackingId}/route - assign route to cargo
+	mux.HandleFunc("/api/v1/cargos/", func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+
+		// Check if it's a route assignment request
+		if strings.HasSuffix(path, "/route") && r.Method == http.MethodPut {
+			trackingID := extractIDFromPath(strings.TrimSuffix(path, "/route"), "/api/v1/cargos/")
+			if trackingID == "" {
+				writeBadRequestError(w, "Tracking ID is required")
+				return
+			}
+			handler.authMiddleware.RequireAuth(handler.AssignRouteHandler)(w, r)
+			return
+		}
+
+		// Otherwise, it's a GET for specific cargo
+		trackingID := extractIDFromPath(path, "/api/v1/cargos/")
+		if trackingID == "" {
+			writeBadRequestError(w, "Tracking ID is required")
+			return
+		}
+
 		switch r.Method {
 		case http.MethodGet:
-			// Reading specific friend requires authentication
-			handler.authMiddleware.RequireAuth(handler.GetFriend)(w, r)
-		case http.MethodPut:
-			// Updating friends requires admin role or ownership
-			handler.authMiddleware.RequireAuth(handler.UpdateFriend)(w, r)
-		case http.MethodDelete:
-			// Deleting friends requires admin role
-			handler.authMiddleware.RequireRole("admin")(handler.DeleteFriend)(w, r)
+			handler.authMiddleware.RequireAuth(handler.TrackCargoHandler)(w, r)
 		default:
 			writeMethodNotAllowedError(w)
 		}
 	})
 
-	// Authentication info endpoint
-	mux.HandleFunc("/auth/me", handler.authMiddleware.RequireAuth(handler.WhoAmI))
+	// Routing Context endpoints - REST compliant
+	// POST /api/v1/route-candidates - request route candidates
+	mux.HandleFunc("/api/v1/route-candidates", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			handler.authMiddleware.RequireAuth(handler.RequestRouteCandidatesHandler)(w, r)
+		default:
+			writeMethodNotAllowedError(w)
+		}
+	})
 
-	// Greeting endpoint with optional auth (different greetings for authenticated vs anonymous)
-	mux.HandleFunc("/greet", handler.authMiddleware.OptionalAuth(handler.Greet))
+	// GET /api/v1/voyages - list voyages
+	mux.HandleFunc("/api/v1/voyages", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handler.authMiddleware.RequireAuth(handler.ListVoyagesHandler)(w, r)
+		default:
+			writeMethodNotAllowedError(w)
+		}
+	})
+
+	// GET /api/v1/locations - list locations
+	mux.HandleFunc("/api/v1/locations", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handler.authMiddleware.RequireAuth(handler.ListLocationsHandler)(w, r)
+		default:
+			writeMethodNotAllowedError(w)
+		}
+	})
+
+	// Handling Context endpoints - REST compliant
+	// POST /api/v1/handling-events - submit handling event
+	// GET /api/v1/handling-events - list handling events with optional filtering
+	// GET /api/v1/handling-events?tracking_id={id} - list handling events for cargo
+	mux.HandleFunc("/api/v1/handling-events", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			handler.authMiddleware.RequireAuth(handler.SubmitHandlingReportHandler)(w, r)
+		case http.MethodGet:
+			handler.authMiddleware.RequireAuth(handler.ListHandlingEventsHandler)(w, r)
+		default:
+			writeMethodNotAllowedError(w)
+		}
+	})
+
+	// Default handler for undefined routes
+	mux.HandleFunc("/", handler.DefaultHandler)
+}
+
+// extractIDFromPath extracts resource ID from REST URL path
+func extractIDFromPath(path, prefix string) string {
+	if !strings.HasPrefix(path, prefix) {
+		return ""
+	}
+	id := strings.TrimPrefix(path, prefix)
+	id = strings.Split(id, "/")[0] // Take only the first segment after prefix
+	return id
 }
 
 func writeMethodNotAllowedError(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusMethodNotAllowed)
 
-	errorResp := map[string]interface{}{
-		"error":   "Method Not Allowed",
-		"message": "The requested HTTP method is not allowed for this endpoint",
-		"code":    http.StatusMethodNotAllowed,
+	errorResponse := ErrorResponse{
+		Error:   "Method Not Allowed",
+		Message: "The requested HTTP method is not allowed for this resource",
+		Code:    http.StatusMethodNotAllowed,
 	}
 
-	json.NewEncoder(w).Encode(errorResp)
+	json.NewEncoder(w).Encode(errorResponse)
+}
+
+func writeInternalServerError(w http.ResponseWriter, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusInternalServerError)
+
+	errorResponse := ErrorResponse{
+		Error:   "Internal Server Error",
+		Message: message,
+		Code:    http.StatusInternalServerError,
+	}
+
+	json.NewEncoder(w).Encode(errorResponse)
+}
+
+func writeBadRequestError(w http.ResponseWriter, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusBadRequest)
+
+	errorResponse := ErrorResponse{
+		Error:   "Bad Request",
+		Message: message,
+		Code:    http.StatusBadRequest,
+	}
+
+	json.NewEncoder(w).Encode(errorResponse)
+}
+
+func writeNotFoundError(w http.ResponseWriter, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNotFound)
+
+	errorResponse := ErrorResponse{
+		Error:   "Not Found",
+		Message: message,
+		Code:    http.StatusNotFound,
+	}
+
+	json.NewEncoder(w).Encode(errorResponse)
 }

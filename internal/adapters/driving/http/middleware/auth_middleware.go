@@ -10,12 +10,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// ContextKey is a type for context keys to avoid collisions.
-type ContextKey string
-
-const (
-	TokenClaimsKey ContextKey = "token_claims"
-)
+// Use the same context key as the auth package to ensure consistency
+// This ensures that claims stored by middleware can be retrieved by auth.ExtractClaims()
 
 // JWTClaims represents JWT claims structure that implements jwt.Claims interface.
 type JWTClaims struct {
@@ -115,7 +111,7 @@ func (m *AuthMiddleware) validateJWTToken(ctx context.Context, tokenString strin
 }
 
 func GetTokenClaims(ctx context.Context) *auth.Claims {
-	claims, ok := ctx.Value(TokenClaimsKey).(*auth.Claims)
+	claims, ok := ctx.Value(auth.ClaimsContextKey).(*auth.Claims)
 	if !ok {
 		return nil
 	}
@@ -143,7 +139,7 @@ func (m *AuthMiddleware) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), TokenClaimsKey, claims)
+		ctx := context.WithValue(r.Context(), auth.ClaimsContextKey, claims)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
 }
@@ -162,7 +158,7 @@ func (m *AuthMiddleware) OptionalAuth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), TokenClaimsKey, claims)
+		ctx := context.WithValue(r.Context(), auth.ClaimsContextKey, claims)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
 }
@@ -186,7 +182,7 @@ func HasRole(ctx context.Context, roles ...string) bool {
 func (m *AuthMiddleware) RequireRole(roles ...string) func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return m.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
-			claims, ok := r.Context().Value(TokenClaimsKey).(*auth.Claims)
+			claims, ok := r.Context().Value(auth.ClaimsContextKey).(*auth.Claims)
 			if !ok || claims == nil {
 				writeErrorResponse(w, "Authentication required", http.StatusUnauthorized)
 				return
@@ -218,7 +214,7 @@ func (m *AuthMiddleware) RequireRole(roles ...string) func(http.HandlerFunc) htt
 func (m *AuthMiddleware) RequireAllRoles(roles ...string) func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return m.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
-			claims, ok := r.Context().Value(TokenClaimsKey).(*auth.Claims)
+			claims, ok := r.Context().Value(auth.ClaimsContextKey).(*auth.Claims)
 			if !ok || claims == nil {
 				writeErrorResponse(w, "Authentication required", http.StatusUnauthorized)
 				return
@@ -250,7 +246,7 @@ func (m *AuthMiddleware) RequireAnyRole(roles ...string) func(http.HandlerFunc) 
 func (m *AuthMiddleware) RequireOwnershipOrRole(ownerIDExtractor func(*http.Request) string, roles ...string) func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return m.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
-			claims, ok := r.Context().Value(TokenClaimsKey).(*auth.Claims)
+			claims, ok := r.Context().Value(auth.ClaimsContextKey).(*auth.Claims)
 			if !ok || claims == nil {
 				writeErrorResponse(w, "Authentication required", http.StatusUnauthorized)
 				return

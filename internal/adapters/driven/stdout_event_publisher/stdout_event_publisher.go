@@ -3,8 +3,7 @@ package stdout_event_publisher
 import (
 	"encoding/json"
 	"fmt"
-	"go_hex/internal/core/domain/shared"
-	"go_hex/internal/core/ports/secondary"
+	"go_hex/internal/support/basedomain"
 )
 
 // StdoutEventPublisher prints events to the console for testing and debugging purposes.
@@ -14,7 +13,7 @@ func NewStdoutEventPublisher() *StdoutEventPublisher {
 	return &StdoutEventPublisher{}
 }
 
-func (p *StdoutEventPublisher) Publish(event shared.DomainEvent) error {
+func (p *StdoutEventPublisher) Publish(event basedomain.DomainEvent) error {
 	b, err := json.MarshalIndent(event, "", "  ")
 	if err != nil {
 		return err
@@ -24,4 +23,4 @@ func (p *StdoutEventPublisher) Publish(event shared.DomainEvent) error {
 	return nil
 }
 
-var _ secondary.EventPublisher = (*StdoutEventPublisher)(nil)
+var _ basedomain.EventPublisher = (*StdoutEventPublisher)(nil)
