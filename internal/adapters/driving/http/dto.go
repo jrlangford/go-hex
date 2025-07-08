@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"go_hex/internal/core/booking/domain"
+	handlingDomain "go_hex/internal/core/handling/domain"
+	routingDomain "go_hex/internal/core/routing/domain"
 )
 
 // BookCargoRequest represents the request payload for booking cargo
@@ -25,21 +27,18 @@ type BookCargoResponse struct {
 
 // CargoDetailsResponse represents detailed cargo information for tracking
 type CargoDetailsResponse struct {
-	TrackingId          string             `json:"trackingId"`
-	Origin              string             `json:"origin"`
-	Destination         string             `json:"destination"`
-	ArrivalDeadline     string             `json:"arrivalDeadline"`
-	RoutingStatus       string             `json:"routingStatus"`
-	TransportStatus     string             `json:"transportStatus"`
-	IsOnTrack           bool               `json:"isOnTrack"`
-	IsMisdirected       bool               `json:"isMisdirected"`
-	IsUnloadedAtDest    bool               `json:"isUnloadedAtDestination"`
-	EstimatedArrival    *string            `json:"estimatedArrival,omitempty"`
-	NextExpectedEvent   *string            `json:"nextExpectedEvent,omitempty"`
-	CurrentVoyageNumber *string            `json:"currentVoyageNumber,omitempty"`
-	LastKnownLocation   *string            `json:"lastKnownLocation,omitempty"`
-	Itinerary           *ItineraryDTO      `json:"itinerary,omitempty"`
-	HandlingHistory     []HandlingEventDTO `json:"handlingHistory,omitempty"`
+	TrackingId          string        `json:"trackingId"`
+	Origin              string        `json:"origin"`
+	Destination         string        `json:"destination"`
+	ArrivalDeadline     string        `json:"arrivalDeadline"`
+	RoutingStatus       string        `json:"routingStatus"`
+	TransportStatus     string        `json:"transportStatus"`
+	IsOnTrack           bool          `json:"isOnTrack"`
+	IsMisdirected       bool          `json:"isMisdirected"`
+	IsUnloadedAtDest    bool          `json:"isUnloadedAtDest"`
+	LastKnownLocation   *string       `json:"lastKnownLocation,omitempty"`
+	CurrentVoyageNumber *string       `json:"currentVoyageNumber,omitempty"`
+	Itinerary           *ItineraryDTO `json:"itinerary,omitempty"`
 }
 
 // ItineraryDTO represents an itinerary for API responses
@@ -64,7 +63,7 @@ type RouteCandidatesResponse struct {
 
 // AssignRouteRequest represents the request to assign a route to cargo
 type AssignRouteRequest struct {
-	ItineraryId string `json:"itineraryId" validate:"required"`
+	Legs []LegDTO `json:"legs" validate:"required,min=1,dive"`
 }
 
 // HandlingEventRequest represents a request to register a handling event
@@ -179,5 +178,44 @@ func BookCargoToResponse(cargo domain.Cargo) BookCargoResponse {
 		ArrivalDeadline: cargo.GetRouteSpecification().ArrivalDeadline.Format(time.RFC3339),
 		RoutingStatus:   string(cargo.GetDelivery().RoutingStatus),
 		DeliveryStatus:  string(cargo.GetDelivery().TransportStatus),
+	}
+}
+
+// Additional DTO conversion helper functions
+
+func HandlingEventToDTO(event handlingDomain.HandlingEvent) HandlingEventDTO {
+	return HandlingEventDTO{
+		EventId:        event.GetEventId().String(),
+		EventType:      string(event.GetEventType()),
+		Location:       event.GetLocation(),
+		VoyageNumber:   event.GetVoyageNumber(),
+		CompletionTime: event.GetCompletionTime().Format(time.RFC3339),
+	}
+}
+
+func VoyageToResponseFromDomain(voyage routingDomain.Voyage) VoyageResponse {
+	schedule := voyage.GetSchedule()
+	legs := make([]LegDTO, len(schedule.Movements))
+
+	for i, movement := range schedule.Movements {
+		legs[i] = LegDTO{
+			VoyageNumber:   voyage.GetVoyageNumber().String(),
+			LoadLocation:   movement.DepartureLocation.String(),
+			UnloadLocation: movement.ArrivalLocation.String(),
+			LoadTime:       movement.DepartureTime.Format(time.RFC3339),
+			UnloadTime:     movement.ArrivalTime.Format(time.RFC3339),
+		}
+	}
+
+	return VoyageResponse{
+		VoyageNumber: voyage.GetVoyageNumber().String(),
+		Schedule:     legs,
+	}
+}
+
+func LocationToResponseFromDomain(location routingDomain.Location) LocationResponse {
+	return LocationResponse{
+		Code: location.GetUnLocode().String(),
+		Name: location.GetName(),
 	}
 }

@@ -67,6 +67,34 @@ Returns information about the cargo shipping system.
 }
 ```
 
+### GET /auth/me
+
+Returns information about the currently authenticated user based on the JWT token.
+
+**Authentication:** Required
+
+**Response:**
+```json
+{
+  "status": "success",
+  "data": {
+    "user_id": "admin-001",
+    "username": "admin.user",
+    "email": "admin@cargo-shipping.com",
+    "roles": ["admin"]
+  }
+}
+```
+
+**Error Response (if not authenticated):**
+```json
+{
+  "error": "unauthorized",
+  "message": "Authentication required",
+  "code": 401
+}
+```
+
 ## Booking Context
 
 ### POST /api/v1/cargos

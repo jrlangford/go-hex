@@ -19,7 +19,7 @@ type EntityID interface {
 type BaseEntity[T EntityID] struct {
 	Id        T         `json:"id" validate:"required"`
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	UpdatedAt time.Time `json:"updated_at" validate:"required,gtfield=CreatedAt"`
+	UpdatedAt time.Time `json:"updated_at" validate:"required,gtefield=CreatedAt"`
 
 	// Event queue for domain events (not serialized)
 	events []DomainEvent `json:"-"`

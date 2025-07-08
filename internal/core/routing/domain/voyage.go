@@ -147,3 +147,49 @@ func (v Voyage) GetVoyageNumber() VoyageNumber {
 func (v Voyage) GetSchedule() Schedule {
 	return v.Data.Schedule
 }
+
+// GetDepartureLocation returns the initial departure location
+func (v Voyage) GetDepartureLocation() UnLocode {
+	return v.Data.Schedule.InitialDepartureLocation()
+}
+
+// GetArrivalLocation returns the final arrival location
+func (v Voyage) GetArrivalLocation() UnLocode {
+	return v.Data.Schedule.FinalArrivalLocation()
+}
+
+// GetDepartureTime returns the initial departure time
+func (v Voyage) GetDepartureTime() time.Time {
+	return v.Data.Schedule.InitialDepartureTime()
+}
+
+// GetArrivalTime returns the final arrival time
+func (v Voyage) GetArrivalTime() time.Time {
+	return v.Data.Schedule.FinalArrivalTime()
+}
+
+// CanCarryCargoFrom checks if this voyage can pick up cargo from the given location
+func (v Voyage) CanCarryCargoFrom(location UnLocode) bool {
+	for _, movement := range v.Data.Schedule.Movements {
+		if movement.DepartureLocation == location {
+			return true
+		}
+	}
+	return false
+}
+
+// CanDeliverCargoTo checks if this voyage can deliver cargo to the given location
+func (v Voyage) CanDeliverCargoTo(location UnLocode) bool {
+	for _, movement := range v.Data.Schedule.Movements {
+		if movement.ArrivalLocation == location {
+			return true
+		}
+	}
+	return false
+}
+
+// IsOperational checks if the voyage is still operational (not completed)
+func (v Voyage) IsOperational() bool {
+	now := time.Now()
+	return v.GetArrivalTime().After(now)
+}

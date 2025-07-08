@@ -2,15 +2,18 @@ package http
 
 import (
 	"encoding/json"
+	"fmt"
 	"go_hex/internal/adapters/driving/http/middleware"
-	bookingApp "go_hex/internal/core/booking/application"
 	bookingDomain "go_hex/internal/core/booking/domain"
+	bookingPorts "go_hex/internal/core/booking/ports/primary"
 	handlingDomain "go_hex/internal/core/handling/domain"
 	handlingPrimary "go_hex/internal/core/handling/ports/primary"
 	routingApp "go_hex/internal/core/routing/application"
 	routingDomain "go_hex/internal/core/routing/domain"
 	"go_hex/internal/support/validation"
 	"net/http"
+	"net/url"
+	"path"
 	"strings"
 	"time"
 )
@@ -18,7 +21,7 @@ import (
 // Handler is the main HTTP handler for the cargo shipping application.
 type Handler struct {
 	authMiddleware        *middleware.AuthMiddleware
-	bookingService        *bookingApp.BookingApplicationService
+	bookingService        bookingPorts.BookingService
 	routingService        *routingApp.RoutingApplicationService
 	handlingReportService handlingPrimary.HandlingReportService
 	handlingQueryService  handlingPrimary.HandlingEventQueryService
@@ -27,7 +30,7 @@ type Handler struct {
 // NewHandler creates a new HTTP handler with the given services and middleware.
 func NewHandler(
 	authMiddleware *middleware.AuthMiddleware,
-	bookingService *bookingApp.BookingApplicationService,
+	bookingService bookingPorts.BookingService,
 	routingService *routingApp.RoutingApplicationService,
 	handlingReportService handlingPrimary.HandlingReportService,
 	handlingQueryService handlingPrimary.HandlingEventQueryService,
@@ -65,13 +68,45 @@ func (h *Handler) writeErrorResponse(w http.ResponseWriter, errorCode, message s
 	json.NewEncoder(w).Encode(errorResponse)
 }
 
-// extractTrackingIdFromPath extracts tracking ID from URL path
-func (h *Handler) extractTrackingIdFromPath(path string) string {
-	parts := strings.Split(path, "/")
-	if len(parts) > 0 {
-		return parts[len(parts)-1]
+// extractResourceIDFromPath extracts resource ID from RESTful URL paths using net/http path utilities
+// This is a more robust version that leverages Go's path manipulation
+func (h *Handler) extractResourceIDFromPath(urlPath, basePattern string) (string, error) {
+	// Clean the URL path using Go's path utilities
+	cleanPath := path.Clean(urlPath)
+	cleanBase := path.Clean(basePattern)
+	
+	// Remove query parameters
+	if parsed, err := url.Parse(cleanPath); err == nil {
+		cleanPath = parsed.Path
 	}
-	return ""
+	
+	// Check if path starts with the base pattern
+	if !strings.HasPrefix(cleanPath, cleanBase) {
+		return "", fmt.Errorf("path %s does not match base pattern %s", cleanPath, cleanBase)
+	}
+	
+	// Extract the ID part
+	remainder := strings.TrimPrefix(cleanPath, cleanBase)
+	remainder = strings.Trim(remainder, "/")
+	
+	// Split by "/" and take the first segment as the ID
+	parts := strings.Split(remainder, "/")
+	if len(parts) > 0 && parts[0] != "" {
+		return parts[0], nil
+	}
+	
+	return "", fmt.Errorf("no resource ID found in path %s", urlPath)
+}
+
+// getQueryParameter extracts a query parameter from the request URL
+func (h *Handler) getQueryParameter(r *http.Request, key string) string {
+	return r.URL.Query().Get(key)
+}
+
+// parseRequestBody parses JSON request body into the provided destination
+func (h *Handler) parseRequestBody(r *http.Request, dest interface{}) error {
+	defer r.Body.Close()
+	return json.NewDecoder(r.Body).Decode(dest)
 }
 
 // HealthResponse represents a health check response.
@@ -141,7 +176,7 @@ func (h *Handler) BookCargoHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Parse request body
 	var req BookCargoRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := h.parseRequestBody(r, &req); err != nil {
 		h.writeErrorResponse(w, "invalid_request", "Invalid JSON format", http.StatusBadRequest)
 		return
 	}
@@ -172,9 +207,9 @@ func (h *Handler) BookCargoHandler(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) TrackCargoHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	// Extract tracking ID from URL path
-	trackingIdStr := h.extractTrackingIdFromPath(r.URL.Path)
-	if trackingIdStr == "" {
+	// Extract tracking ID from URL path using improved extraction
+	trackingIdStr, err := h.extractResourceIDFromPath(r.URL.Path, "/api/v1/cargos")
+	if err != nil {
 		h.writeErrorResponse(w, "invalid_request", "Tracking ID is required", http.StatusBadRequest)
 		return
 	}
@@ -205,15 +240,23 @@ func (h *Handler) TrackCargoHandler(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RequestRouteCandidatesHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	// Extract tracking ID from URL path
-	trackingIdStr := h.extractTrackingIdFromPath(r.URL.Path)
-	if trackingIdStr == "" {
-		h.writeErrorResponse(w, "invalid_request", "Tracking ID is required", http.StatusBadRequest)
+	// Parse request body
+	var req struct {
+		TrackingId string `json:"trackingId" validate:"required"`
+	}
+	if err := h.parseRequestBody(r, &req); err != nil {
+		h.writeErrorResponse(w, "invalid_request", "Invalid JSON format", http.StatusBadRequest)
+		return
+	}
+
+	// Validate request
+	if err := validation.Validate(req); err != nil {
+		h.writeErrorResponse(w, "validation_error", err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// Parse tracking ID
-	trackingId, err := bookingDomain.TrackingIdFromString(trackingIdStr)
+	trackingId, err := bookingDomain.TrackingIdFromString(req.TrackingId)
 	if err != nil {
 		h.writeErrorResponse(w, "invalid_tracking_id", "Invalid tracking ID format", http.StatusBadRequest)
 		return
@@ -232,15 +275,10 @@ func (h *Handler) RequestRouteCandidatesHandler(w http.ResponseWriter, r *http.R
 		routes[i] = *ItineraryToDTO(candidate)
 	}
 
-	// Return response
-	response := RouteCandidatesResponse{
-		TrackingId: trackingIdStr,
-		Routes:     routes,
-	}
-
+	// Return response as array of itineraries (according to API spec)
 	json.NewEncoder(w).Encode(SuccessResponse{
 		Status: "success",
-		Data:   response,
+		Data:   routes,
 	})
 }
 
@@ -250,7 +288,7 @@ func (h *Handler) SubmitHandlingReportHandler(w http.ResponseWriter, r *http.Req
 
 	// Parse request body
 	var req HandlingEventRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := h.parseRequestBody(r, &req); err != nil {
 		h.writeErrorResponse(w, "invalid_request", "Invalid JSON format", http.StatusBadRequest)
 		return
 	}
@@ -312,16 +350,19 @@ func (h *Handler) SubmitHandlingReportHandler(w http.ResponseWriter, r *http.Req
 func (h *Handler) AssignRouteHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	// Extract tracking ID from URL path
-	trackingIdStr := h.extractTrackingIdFromPath(r.URL.Path)
-	if trackingIdStr == "" {
+	// Handle the special case where URL has "/route" suffix
+	urlPath := strings.TrimSuffix(r.URL.Path, "/route")
+
+	// Extract tracking ID from URL path using improved extraction
+	trackingIdStr, err := h.extractResourceIDFromPath(urlPath, "/api/v1/cargos")
+	if err != nil {
 		h.writeErrorResponse(w, "invalid_request", "Tracking ID is required", http.StatusBadRequest)
 		return
 	}
 
 	// Parse request body
 	var req AssignRouteRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := h.parseRequestBody(r, &req); err != nil {
 		h.writeErrorResponse(w, "invalid_request", "Invalid JSON format", http.StatusBadRequest)
 		return
 	}
@@ -332,17 +373,56 @@ func (h *Handler) AssignRouteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse tracking ID (validate format)
-	_, err := bookingDomain.TrackingIdFromString(trackingIdStr)
+	// Parse tracking ID
+	trackingId, err := bookingDomain.TrackingIdFromString(trackingIdStr)
 	if err != nil {
 		h.writeErrorResponse(w, "invalid_tracking_id", "Invalid tracking ID format", http.StatusBadRequest)
 		return
 	}
 
-	// TODO: For now, we'll return success but the actual itinerary creation
-	// would require getting the route candidate by ID and converting it to an Itinerary
-	// This would typically involve the routing service
-	h.writeErrorResponse(w, "not_implemented", "Route assignment not fully implemented", http.StatusNotImplemented)
+	// Convert request legs to domain itinerary
+	var legs []bookingDomain.Leg
+	for _, legReq := range req.Legs {
+		// Parse times
+		departureTime, err := time.Parse(time.RFC3339, legReq.LoadTime)
+		if err != nil {
+			h.writeErrorResponse(w, "invalid_time", "Invalid load time format", http.StatusBadRequest)
+			return
+		}
+		arrivalTime, err := time.Parse(time.RFC3339, legReq.UnloadTime)
+		if err != nil {
+			h.writeErrorResponse(w, "invalid_time", "Invalid unload time format", http.StatusBadRequest)
+			return
+		}
+
+		// Create leg
+		leg, err := bookingDomain.NewLeg(legReq.VoyageNumber, legReq.LoadLocation, legReq.UnloadLocation, departureTime, arrivalTime)
+		if err != nil {
+			h.writeErrorResponse(w, "invalid_leg", err.Error(), http.StatusBadRequest)
+			return
+		}
+		legs = append(legs, leg)
+	}
+
+	// Create itinerary
+	itinerary, err := bookingDomain.NewItinerary(legs)
+	if err != nil {
+		h.writeErrorResponse(w, "invalid_itinerary", err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Assign route to cargo
+	err = h.bookingService.AssignRouteToCargo(r.Context(), trackingId, itinerary)
+	if err != nil {
+		h.writeErrorResponse(w, "route_assignment_failed", err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return success response
+	json.NewEncoder(w).Encode(SuccessResponse{
+		Status: "success",
+		Data:   map[string]string{"message": "Route assigned successfully"},
+	})
 }
 
 // ListCargoHandler handles listing all cargo.
@@ -419,7 +499,7 @@ func (h *Handler) ListHandlingEventsHandler(w http.ResponseWriter, r *http.Reque
 	w.Header().Set("Content-Type", "application/json")
 
 	// Check for tracking_id query parameter
-	trackingID := r.URL.Query().Get("tracking_id")
+	trackingID := h.getQueryParameter(r, "tracking_id")
 
 	var events []HandlingEventResponse
 
@@ -453,6 +533,39 @@ func (h *Handler) ListHandlingEventsHandler(w http.ResponseWriter, r *http.Reque
 	json.NewEncoder(w).Encode(SuccessResponse{
 		Status: "success",
 		Data:   events,
+	})
+}
+
+// AuthMeResponse represents the response for /auth/me endpoint.
+type AuthMeResponse struct {
+	UserID   string   `json:"user_id"`
+	Username string   `json:"username"`
+	Email    string   `json:"email,omitempty"`
+	Roles    []string `json:"roles"`
+}
+
+// AuthMeHandler handles /auth/me requests to introspect tokens.
+func (h *Handler) AuthMeHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Extract claims from context
+	claims := middleware.GetTokenClaims(r.Context())
+	if claims == nil {
+		h.writeErrorResponse(w, "unauthorized", "Authentication required", http.StatusUnauthorized)
+		return
+	}
+
+	// Create response
+	response := AuthMeResponse{
+		UserID:   claims.UserID,
+		Username: claims.Username,
+		Email:    claims.Email,
+		Roles:    claims.Roles,
+	}
+
+	json.NewEncoder(w).Encode(SuccessResponse{
+		Status: "success",
+		Data:   response,
 	})
 }
 

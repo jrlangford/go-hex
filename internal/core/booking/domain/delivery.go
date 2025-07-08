@@ -75,3 +75,28 @@ func (d Delivery) IsDelivered() bool {
 func (d Delivery) IsOnTrack() bool {
 	return d.RoutingStatus == RoutingStatusRouted
 }
+
+// IsMisdirected checks if the cargo is not following its planned route
+func (d Delivery) IsMisdirected() bool {
+	return d.RoutingStatus == RoutingStatusMisdirected
+}
+
+// IsInTransit checks if the cargo is currently being transported
+func (d Delivery) IsInTransit() bool {
+	return d.TransportStatus == TransportStatusOnboardCarrier
+}
+
+// IsAtPort checks if the cargo is currently at a port
+func (d Delivery) IsAtPort() bool {
+	return d.TransportStatus == TransportStatusInPort
+}
+
+// HasBeenReceived checks if the cargo has been received at origin
+func (d Delivery) HasBeenReceived() bool {
+	return d.TransportStatus != TransportStatusNotReceived
+}
+
+// CanBeClaimed checks if the cargo is ready to be claimed
+func (d Delivery) CanBeClaimed() bool {
+	return d.IsUnloadedAtDest && d.TransportStatus == TransportStatusInPort
+}

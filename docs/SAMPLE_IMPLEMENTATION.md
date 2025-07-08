@@ -113,6 +113,39 @@ curl -X POST http://localhost:8080/api/v1/cargos \
   }'
 ```
 
+### 6. Get route candidates for booked cargo
+
+```bash
+curl -X POST http://localhost:8080/api/v1/route-candidates \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  -d '{
+    "trackingId": "{tracking_id}",
+  }'
+```
+
+### 7. Assign route to cargo
+
+```bash
+curl -X PUT http://localhost:8080/api/v1/cargos/{trackingId}/route \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  -d '{
+    "itinerary": {
+      "voyages": [
+        {
+          "voyageNumber": "V123",
+          "origin": "SESTO",
+          "destination": "NLRTM",
+          "departureTime": "2025-01-01T00:00:00Z",
+          "arrivalTime": "2025-01-10T00:00:00Z"
+        }
+      ]
+    }
+  }'
+```
+
+
 ## REST API Endpoints
 
 ### Public Endpoints

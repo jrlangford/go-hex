@@ -97,9 +97,19 @@ func (c Cargo) IsRouted() bool {
 
 // AssignToRoute assigns an itinerary to the cargo
 func (c *Cargo) AssignToRoute(itinerary Itinerary) error {
+	// Cannot reassign route if already delivered
+	if c.Data.Delivery.IsDelivered() {
+		return NewDomainValidationError("cannot reassign route to already delivered cargo", nil)
+	}
+
 	// Validate that the itinerary satisfies the route specification
 	if !itinerary.SatisfiesSpecification(c.Data.RouteSpecification) {
 		return NewDomainValidationError("itinerary does not satisfy route specification", nil)
+	}
+
+	// Check if itinerary arrival deadline would be missed
+	if itinerary.FinalArrivalTime().After(c.Data.RouteSpecification.ArrivalDeadline) {
+		return NewDomainValidationError("itinerary arrival time exceeds deadline", nil)
 	}
 
 	c.Data.Itinerary = &itinerary
@@ -194,6 +204,34 @@ func (c *Cargo) calculateRoutingStatus(lastEvent HandlingEventSummary) RoutingSt
 func (c *Cargo) isUnloadedAtDestination(lastEvent HandlingEventSummary) bool {
 	return lastEvent.Type == "UNLOAD" &&
 		lastEvent.Location == c.Data.RouteSpecification.Destination
+}
+
+// CanBeRerouted checks if cargo can be assigned a new route
+func (c Cargo) CanBeRerouted() bool {
+	return !c.Data.Delivery.IsDelivered() &&
+		c.Data.Delivery.TransportStatus != TransportStatusClaimed
+}
+
+// IsReadyForPickup checks if cargo is ready for pickup at origin
+func (c Cargo) IsReadyForPickup() bool {
+	return c.IsRouted() &&
+		c.Data.Delivery.TransportStatus == TransportStatusNotReceived &&
+		time.Now().Before(c.Data.Itinerary.InitialDepartureTime())
+}
+
+// IsOverdue checks if cargo delivery is overdue
+func (c Cargo) IsOverdue() bool {
+	return time.Now().After(c.Data.RouteSpecification.ArrivalDeadline) &&
+		!c.Data.Delivery.IsDelivered()
+}
+
+// GetEstimatedTimeOfArrival returns the ETA based on current itinerary
+func (c Cargo) GetEstimatedTimeOfArrival() *time.Time {
+	if c.Data.Itinerary == nil {
+		return nil
+	}
+	eta := c.Data.Itinerary.FinalArrivalTime()
+	return &eta
 }
 
 // HandlingEventSummary represents key data from a handling event

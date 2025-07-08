@@ -11,6 +11,9 @@ func RegisterRoutes(mux *http.ServeMux, handler *Handler) {
 	mux.HandleFunc("/health", handler.HealthHandler)
 	mux.HandleFunc("/info", handler.InfoHandler)
 
+	// Authentication endpoints
+	mux.HandleFunc("/auth/me", handler.authMiddleware.RequireAuth(handler.AuthMeHandler))
+
 	// Cargo Booking Context endpoints - REST compliant
 	// GET/POST /api/v1/cargos - list/create cargo
 	mux.HandleFunc("/api/v1/cargos", func(w http.ResponseWriter, r *http.Request) {
@@ -31,22 +34,12 @@ func RegisterRoutes(mux *http.ServeMux, handler *Handler) {
 
 		// Check if it's a route assignment request
 		if strings.HasSuffix(path, "/route") && r.Method == http.MethodPut {
-			trackingID := extractIDFromPath(strings.TrimSuffix(path, "/route"), "/api/v1/cargos/")
-			if trackingID == "" {
-				writeBadRequestError(w, "Tracking ID is required")
-				return
-			}
+			// Let the handler extract and validate the tracking ID
 			handler.authMiddleware.RequireAuth(handler.AssignRouteHandler)(w, r)
 			return
 		}
 
 		// Otherwise, it's a GET for specific cargo
-		trackingID := extractIDFromPath(path, "/api/v1/cargos/")
-		if trackingID == "" {
-			writeBadRequestError(w, "Tracking ID is required")
-			return
-		}
-
 		switch r.Method {
 		case http.MethodGet:
 			handler.authMiddleware.RequireAuth(handler.TrackCargoHandler)(w, r)

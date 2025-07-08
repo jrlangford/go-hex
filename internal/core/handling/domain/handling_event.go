@@ -85,14 +85,49 @@ func NewHandlingEvent(
 		RegistrationTime: time.Now(),
 	}
 
+	// Validate event type
+	validEventTypes := []HandlingEventType{
+		HandlingEventTypeReceive,
+		HandlingEventTypeLoad,
+		HandlingEventTypeUnload,
+		HandlingEventTypeClaim,
+		HandlingEventTypeCustoms,
+	}
+	isValidEventType := false
+	for _, validType := range validEventTypes {
+		if eventType == validType {
+			isValidEventType = true
+			break
+		}
+	}
+	if !isValidEventType {
+		return HandlingEvent{}, NewDomainValidationError("invalid event type", nil)
+	}
+
 	// Validate business rules
 	if completionTime.After(time.Now()) {
 		return HandlingEvent{}, NewDomainValidationError("completion time cannot be in the future", nil)
 	}
 
+	// Validate completion time is not too far in the past (e.g., more than 30 days)
+	thirtyDaysAgo := time.Now().AddDate(0, 0, -30)
+	if completionTime.Before(thirtyDaysAgo) {
+		return HandlingEvent{}, NewDomainValidationError("completion time cannot be more than 30 days in the past", nil)
+	}
+
 	// Validate voyage number is required for LOAD and UNLOAD events
 	if (eventType == HandlingEventTypeLoad || eventType == HandlingEventTypeUnload) && voyageNumber == "" {
 		return HandlingEvent{}, NewDomainValidationError("voyage number is required for LOAD and UNLOAD events", nil)
+	}
+
+	// Validate voyage number should not be provided for RECEIVE and CLAIM events
+	if (eventType == HandlingEventTypeReceive || eventType == HandlingEventTypeClaim) && voyageNumber != "" {
+		return HandlingEvent{}, NewDomainValidationError("voyage number should not be provided for RECEIVE and CLAIM events", nil)
+	}
+
+	// Validate location format (should be UN/LOCODE - 5 characters)
+	if len(location) != 5 {
+		return HandlingEvent{}, NewDomainValidationError("location must be a valid 5-character UN/LOCODE", nil)
 	}
 
 	if err := validation.Validate(data); err != nil {
@@ -170,19 +205,122 @@ func (h HandlingHistory) GetMostRecentEvent() *HandlingEvent {
 	if len(h.Events) == 0 {
 		return nil
 	}
-
-	// Find the most recent event by completion time
-	mostRecent := &h.Events[0]
-	for i := 1; i < len(h.Events); i++ {
-		if h.Events[i].GetCompletionTime().After(mostRecent.GetCompletionTime()) {
-			mostRecent = &h.Events[i]
-		}
-	}
-
-	return mostRecent
+	return &h.Events[len(h.Events)-1]
 }
 
 // GetEventCount returns the number of events in the history
 func (h HandlingHistory) GetEventCount() int {
 	return len(h.Events)
+}
+
+// HasEventType checks if the history contains an event of the specified type
+func (h HandlingHistory) HasEventType(eventType HandlingEventType) bool {
+	for _, event := range h.Events {
+		if event.GetEventType() == eventType {
+			return true
+		}
+	}
+	return false
+}
+
+// GetLastEventAtLocation returns the most recent event at the specified location
+func (h HandlingHistory) GetLastEventAtLocation(location string) *HandlingEvent {
+	for i := len(h.Events) - 1; i >= 0; i-- {
+		if h.Events[i].GetLocation() == location {
+			return &h.Events[i]
+		}
+	}
+	return nil
+}
+
+// IsValidSequence validates that the events form a logical sequence
+func (h HandlingHistory) IsValidSequence() error {
+	if len(h.Events) == 0 {
+		return nil
+	}
+
+	// First event must be RECEIVE
+	if h.Events[0].GetEventType() != HandlingEventTypeReceive {
+		return NewDomainValidationError("first handling event must be RECEIVE", nil)
+	}
+
+	// Check chronological order
+	for i := 1; i < len(h.Events); i++ {
+		prevEvent := h.Events[i-1]
+		currentEvent := h.Events[i]
+
+		if currentEvent.GetCompletionTime().Before(prevEvent.GetCompletionTime()) {
+			return NewDomainValidationError("events must be in chronological order", nil)
+		}
+
+		// Business rule: Can't CLAIM before final UNLOAD
+		if currentEvent.GetEventType() == HandlingEventTypeClaim {
+			lastUnload := h.getLastUnloadEvent()
+			if lastUnload == nil {
+				return NewDomainValidationError("cannot claim cargo before unloading", nil)
+			}
+		}
+	}
+
+	return nil
+}
+
+// getLastUnloadEvent returns the most recent UNLOAD event
+func (h HandlingHistory) getLastUnloadEvent() *HandlingEvent {
+	for i := len(h.Events) - 1; i >= 0; i-- {
+		if h.Events[i].GetEventType() == HandlingEventTypeUnload {
+			return &h.Events[i]
+		}
+	}
+	return nil
+}
+
+// IsCompleted checks if the cargo handling is completed (claimed)
+func (h HandlingHistory) IsCompleted() bool {
+	return h.HasEventType(HandlingEventTypeClaim)
+}
+
+// IsReceived checks if the cargo has been received
+func (h HandlingHistory) IsReceived() bool {
+	return h.HasEventType(HandlingEventTypeReceive)
+}
+
+// GetCurrentLocation returns the last known location from handling events
+func (h HandlingHistory) GetCurrentLocation() string {
+	lastEvent := h.GetMostRecentEvent()
+	if lastEvent == nil {
+		return ""
+	}
+	return lastEvent.GetLocation()
+}
+
+// GetCurrentVoyage returns the current voyage from the most recent handling event
+func (h HandlingHistory) GetCurrentVoyage() string {
+	lastEvent := h.GetMostRecentEvent()
+	if lastEvent == nil {
+		return ""
+	}
+	return lastEvent.GetVoyageNumber()
+}
+
+// GetEventsOfType returns all events of the specified type
+func (h HandlingHistory) GetEventsOfType(eventType HandlingEventType) []HandlingEvent {
+	var events []HandlingEvent
+	for _, event := range h.Events {
+		if event.GetEventType() == eventType {
+			events = append(events, event)
+		}
+	}
+	return events
+}
+
+// GetEventsAtLocation returns all events that occurred at the specified location
+func (h HandlingHistory) GetEventsAtLocation(location string) []HandlingEvent {
+	var events []HandlingEvent
+	for _, event := range h.Events {
+		if event.GetLocation() == location {
+			events = append(events, event)
+		}
+	}
+	return events
 }
