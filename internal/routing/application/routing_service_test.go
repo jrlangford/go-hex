@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"go_hex/internal/core/routing/domain"
+	"go_hex/internal/routing/domain"
 	"go_hex/internal/support/auth"
 	"log/slog"
 

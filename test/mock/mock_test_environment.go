@@ -12,12 +12,12 @@ import (
 	"go_hex/internal/adapters/driven/in_memory_voyage_repo"
 	"go_hex/internal/adapters/driven/stdout_event_publisher"
 	"go_hex/internal/adapters/integration"
-	"go_hex/internal/core/booking/domain"
-	bookingMock "go_hex/internal/core/booking/mock"
-	handlingDomain "go_hex/internal/core/handling/domain"
-	handlingMock "go_hex/internal/core/handling/mock"
-	routingDomain "go_hex/internal/core/routing/domain"
-	routingMock "go_hex/internal/core/routing/mock"
+	"go_hex/internal/booking/domain"
+	bookingMock "go_hex/internal/booking/mock"
+	handlingDomain "go_hex/internal/handling/domain"
+	handlingMock "go_hex/internal/handling/mock"
+	routingDomain "go_hex/internal/routing/domain"
+	routingMock "go_hex/internal/routing/mock"
 )
 
 // MockTestEnvironment provides a complete test environment using mock applications

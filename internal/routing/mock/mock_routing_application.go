@@ -40,6 +40,32 @@ func NewMockRoutingApplication(
 	}
 }
 
+func (m *MockRoutingApplication) GenerateTestData() {
+	m.logger.Info("Generating test data for routing application")
+
+	// Generate standard locations
+	locationSpecs := m.GenerateStandardLocations(10)
+	m.logger.Info("Generated standard locations", "count", len(locationSpecs))
+
+	// Populate test locations
+	locations, err := m.PopulateTestLocations(context.Background(), locationSpecs)
+	if err != nil {
+		m.logger.Error("Failed to populate test locations", "error", err)
+		return
+	}
+
+	m.logger.Info("Successfully populated test locations", "count", len(locations))
+
+	// Populate test voyages
+	voyages, err := m.PopulateTestVoyages(context.Background(), locations, 20)
+	if err != nil {
+		m.logger.Error("Failed to populate test voyages", "error", err)
+		return
+	}
+
+	m.logger.Info("Successfully populated test voyages", "count", len(voyages))
+}
+
 // PopulateTestLocations creates test location data through the domain layer
 func (m *MockRoutingApplication) PopulateTestLocations(ctx context.Context, locationSpecs []TestLocationSpec) ([]domain.Location, error) {
 	m.logger.Info("Populating test locations", "count", len(locationSpecs))

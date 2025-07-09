@@ -9,9 +9,9 @@ import (
 	"math/rand"
 	"time"
 
-	bookingDomain "go_hex/internal/core/booking/domain"
-	handlingDomain "go_hex/internal/core/handling/domain"
-	routingDomain "go_hex/internal/core/routing/domain"
+	bookingDomain "go_hex/internal/booking/domain"
+	handlingDomain "go_hex/internal/handling/domain"
+	routingDomain "go_hex/internal/routing/domain"
 )
 
 // TestDataGenerator provides methods to generate test data for all bounded contexts

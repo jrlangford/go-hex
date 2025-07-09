@@ -15,12 +15,11 @@ import (
 	"go_hex/internal/adapters/integration"
 	"go_hex/internal/support/auth"
 
-	bookingApp "go_hex/internal/core/booking/application"
-	bookingDomain "go_hex/internal/core/booking/domain"
-	handlingApp "go_hex/internal/core/handling/application"
-	"go_hex/internal/core/handling/domain"
-	handlingDomain "go_hex/internal/core/handling/domain"
-	routingApp "go_hex/internal/core/routing/application"
+	bookingApp "go_hex/internal/booking/application"
+	bookingDomain "go_hex/internal/booking/domain"
+	handlingApp "go_hex/internal/handling/application"
+	handlingDomain "go_hex/internal/handling/domain"
+	routingApp "go_hex/internal/routing/application"
 )
 
 // createAuthenticatedContext creates a context with admin authentication for testing
@@ -71,6 +70,7 @@ func TestCargoShippingSystemIntegration(t *testing.T) {
 	handlingReportService := handlingApp.NewHandlingReportService(
 		handlingEventRepo,
 		eventBus, // Event publisher for handling events
+		logger,
 	)
 
 	// Set up event-driven integration: Handling->Booking (asynchronous, ACL)
@@ -123,7 +123,7 @@ func TestCargoShippingSystemIntegration(t *testing.T) {
 
 	// Test 4: Submit handling report (Handling->Booking asynchronous integration)
 	t.Log("Test 4: Submitting handling report")
-	handlingReport := domain.HandlingReport{
+	handlingReport := handlingDomain.HandlingReport{
 		TrackingId:     cargo.GetTrackingId().String(),
 		EventType:      string(handlingDomain.HandlingEventTypeLoad),
 		Location:       "SESTO",

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"go_hex/internal/core/booking/domain"
+	"go_hex/internal/booking/domain"
 	"go_hex/internal/support/auth"
 	"go_hex/internal/support/basedomain"
 	"log/slog"
@@ -421,7 +421,7 @@ func createContextWithClaims(t *testing.T, permissions []string) context.Context
 		map[string]string{"test": "true"},
 	)
 	require.NoError(t, err)
-	
+
 	return context.WithValue(context.Background(), auth.ClaimsContextKey, claims)
 }
 

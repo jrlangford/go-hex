@@ -10,9 +10,9 @@ import (
 	"go_hex/internal/adapters/driven/in_memory_handling_repo"
 	"go_hex/internal/adapters/driven/in_memory_location_repo"
 	"go_hex/internal/adapters/driven/in_memory_voyage_repo"
-	bookingApp "go_hex/internal/core/booking/application"
-	handlingApp "go_hex/internal/core/handling/application"
-	routingApp "go_hex/internal/core/routing/application"
+	bookingApp "go_hex/internal/booking/application"
+	handlingApp "go_hex/internal/handling/application"
+	routingApp "go_hex/internal/routing/application"
 )
 
 // TestEnvironment holds all the services and repositories needed for testing

@@ -3,11 +3,13 @@ package application
 import (
 	"context"
 	"errors"
+	"log/slog"
+	"os"
 	"testing"
 	"time"
 
-	"go_hex/internal/core/handling/domain"
-	"go_hex/internal/core/handling/ports/primary"
+	"go_hex/internal/handling/domain"
+	"go_hex/internal/handling/ports/primary"
 	"go_hex/internal/support/auth"
 	"go_hex/internal/support/basedomain"
 
@@ -55,7 +57,11 @@ func TestHandlingReportService_SubmitHandlingReport(t *testing.T) {
 		repo := &MockHandlingEventRepository{}
 		publisher := &MockHandlingEventPublisher{}
 
-		service := NewHandlingReportService(repo, publisher)
+		jsonHandler := slog.NewJSONHandler(os.Stdout, nil)
+
+		logger := slog.New(jsonHandler)
+
+		service := NewHandlingReportService(repo, publisher, logger)
 
 		return service, repo, publisher
 	}
@@ -207,7 +213,11 @@ func TestHandlingEventQueryService_GetHandlingHistory(t *testing.T) {
 	setup := func() (primary.HandlingEventQueryService, *MockHandlingEventRepository) {
 		repo := &MockHandlingEventRepository{}
 
-		service := NewHandlingEventQueryService(repo)
+		jsonHandler := slog.NewJSONHandler(os.Stdout, nil)
+
+		logger := slog.New(jsonHandler)
+
+		service := NewHandlingEventQueryService(repo, logger)
 
 		return service, repo
 	}
@@ -271,7 +281,11 @@ func TestHandlingEventQueryService_ListAllHandlingEvents(t *testing.T) {
 	setup := func() (primary.HandlingEventQueryService, *MockHandlingEventRepository) {
 		repo := &MockHandlingEventRepository{}
 
-		service := NewHandlingEventQueryService(repo)
+		jsonHandler := slog.NewJSONHandler(os.Stdout, nil)
+
+		logger := slog.New(jsonHandler)
+
+		service := NewHandlingEventQueryService(repo, logger)
 
 		return service, repo
 	}
@@ -334,7 +348,11 @@ func TestHandlingEventQueryService_GetHandlingEvent(t *testing.T) {
 	setup := func() (primary.HandlingEventQueryService, *MockHandlingEventRepository) {
 		repo := &MockHandlingEventRepository{}
 
-		service := NewHandlingEventQueryService(repo)
+		jsonHandler := slog.NewJSONHandler(os.Stdout, nil)
+
+		logger := slog.New(jsonHandler)
+
+		service := NewHandlingEventQueryService(repo, logger)
 
 		return service, repo
 	}

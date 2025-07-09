@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"go_hex/internal/adapters/driven/event_bus"
 	"go_hex/internal/adapters/driven/in_memory_cargo_repo"
 	"go_hex/internal/adapters/driven/in_memory_handling_repo"
@@ -22,6 +23,7 @@ import (
 	mockHandlingApp "go_hex/internal/handling/mock"
 	mockRoutingApp "go_hex/internal/routing/mock"
 
+	"go_hex/internal/support/auth"
 	"go_hex/internal/support/config"
 	"go_hex/internal/support/logging"
 	"go_hex/internal/support/server"
@@ -66,31 +68,68 @@ func wireAppDependencies(cfg *config.Config, logger *slog.Logger) *httpadapter.H
 		logger.Info("Running in mock mode with pre-populated mock data", "mode", cfg.Mode, "isMockMode", cfg.IsMockMode())
 
 		// Create Routing context application service
-		routingService = mockRoutingApp.NewMockRoutingApplication(
+		mockRoutingService := mockRoutingApp.NewMockRoutingApplication(
 			voyageRepo,
 			locationRepo,
 			logger,
-			1017, // Use seed from config for reproducibility
+			1017, // Use seed or reproducibility
 		)
+		routingService = mockRoutingService
 
 		// Create adapter for Booking->Routing integration (synchronous, customer-supplier)
 		routingAdapter := integration.NewRoutingServiceAdapter(routingService)
 
 		// Create Mock Booking context application service
-		bookingService = mockBookingApp.NewMockBookingApplication(
+		mockBookingService := mockBookingApp.NewMockBookingApplication(
 			cargoRepo,
 			routingAdapter, // Synchronous integration with routing
 			eventBus,       // Event publisher
 			logger,
-			1017, // Use seed from config for reproducibility
+			1017, // Use seed for reproducibility
 		)
+		bookingService = mockBookingService
 
 		handlingReportService = mockHandlingApp.NewMockHandlingApplication(
 			handlingEventRepo,
 			eventBus, // Event publisher for handling events
 			logger,
-			1017, // Use seed from config for reproducibility
+			1017, // Use seed for reproducibility
 		)
+
+		claims, err := auth.NewClaims(
+			"test-user",
+			"test-system",
+			"test@example.com",
+			[]string{string(auth.RoleAdmin)},
+			map[string]string{"test": "true"},
+		)
+		if err != nil {
+			logger.Error("Failed to create test claims", "error", err)
+			log.Panic("Failed to create test claims:", err)
+		}
+
+		ctx := context.WithValue(context.Background(), auth.ClaimsContextKey, claims)
+
+		mockRoutingService.GenerateTestData() // Populate mock data
+
+		locations, err := mockRoutingService.ListAllLocations(ctx)
+		if err != nil {
+			logger.Error("Failed to list locations in mock mode", "error", err)
+			log.Panic("Failed to list locations in mock mode:", err)
+		}
+
+		locationStrings := make([]string, len(locations))
+		for i, loc := range locations {
+			locationStrings[i] = loc.GetUnLocode().String()
+		}
+
+		scenarios := mockBookingService.GenerateCargoScenarios(locationStrings, 10) // Generate test cargo scenarios
+
+		_, err = mockBookingService.PopulateTestCargo(ctx, scenarios)
+		if err != nil {
+			logger.Error("Failed to populate test cargo in mock mode", "error", err)
+			log.Panic("Failed to populate test cargo in mock mode:", err)
+		}
 
 	} else {
 		logger.Info("Running in live mode", "mode", cfg.Mode, "isMockMode", cfg.IsMockMode(), "isLiveMode", cfg.IsLiveMode())

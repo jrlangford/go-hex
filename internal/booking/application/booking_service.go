@@ -20,7 +20,6 @@ type BookingApplicationService struct {
 
 // Ensure BookingApplicationService implements the primary ports
 var _ primary.BookingService = (*BookingApplicationService)(nil)
-var _ primary.CargoTracker = (*BookingApplicationService)(nil)
 
 // NewBookingApplicationService creates a new BookingApplicationService
 func NewBookingApplicationService(
