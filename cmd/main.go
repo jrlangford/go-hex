@@ -7,8 +7,8 @@ import (
 	"go_hex/internal/adapters/driven/in_memory_handling_repo"
 	"go_hex/internal/adapters/driven/in_memory_location_repo"
 	"go_hex/internal/adapters/driven/in_memory_voyage_repo"
-	httpadapter "go_hex/internal/adapters/driving/http"
-	"go_hex/internal/adapters/driving/http/middleware"
+	httpadapter "go_hex/internal/adapters/driving/httpadapter"
+	"go_hex/internal/adapters/driving/httpadapter/httpmiddleware"
 	"go_hex/internal/adapters/integration"
 
 	"go_hex/internal/booking/bookingapplication"
@@ -19,9 +19,9 @@ import (
 	"go_hex/internal/routing/ports/routingprimary"
 	"go_hex/internal/routing/routingapplication"
 
-	mockBookingApp "go_hex/internal/booking/bookingmock"
-	mockHandlingApp "go_hex/internal/handling/handlingmock"
-	mockRoutingApp "go_hex/internal/routing/routingmock"
+	"go_hex/internal/booking/bookingmock"
+	"go_hex/internal/handling/handlingmock"
+	"go_hex/internal/routing/routingmock"
 
 	"go_hex/internal/support/auth"
 	"go_hex/internal/support/config"
@@ -68,7 +68,7 @@ func wireAppDependencies(cfg *config.Config, logger *slog.Logger) *httpadapter.H
 		logger.Info("Running in mock mode with pre-populated mock data", "mode", cfg.Mode, "isMockMode", cfg.IsMockMode())
 
 		// Create Routing context application service
-		mockRoutingService := mockRoutingApp.NewMockRoutingApplication(
+		mockRoutingService := routingmock.NewMockRoutingApplication(
 			voyageRepo,
 			locationRepo,
 			logger,
@@ -80,7 +80,7 @@ func wireAppDependencies(cfg *config.Config, logger *slog.Logger) *httpadapter.H
 		routingAdapter := integration.NewRoutingServiceAdapter(routingService)
 
 		// Create Mock Booking context application service
-		mockBookingService := mockBookingApp.NewMockBookingApplication(
+		mockBookingService := bookingmock.NewMockBookingApplication(
 			cargoRepo,
 			routingAdapter, // Synchronous integration with routing
 			eventBus,       // Event publisher
@@ -89,7 +89,7 @@ func wireAppDependencies(cfg *config.Config, logger *slog.Logger) *httpadapter.H
 		)
 		bookingService = mockBookingService
 
-		handlingReportService = mockHandlingApp.NewMockHandlingApplication(
+		handlingReportService = handlingmock.NewMockHandlingApplication(
 			handlingEventRepo,
 			eventBus, // Event publisher for handling events
 			logger,
@@ -173,7 +173,7 @@ func wireAppDependencies(cfg *config.Config, logger *slog.Logger) *httpadapter.H
 	)
 
 	// Wire up authentication middleware
-	authMiddleware := middleware.NewAuthMiddleware(cfg.JWT.SecretKey, cfg.JWT.Issuer, cfg.JWT.Audience)
+	authMiddleware := httpmiddleware.NewAuthMiddleware(cfg.JWT.SecretKey, cfg.JWT.Issuer, cfg.JWT.Audience)
 
 	// Create HTTP handler with all application services
 	httpHandler := httpadapter.NewHandler(

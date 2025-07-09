@@ -1,4 +1,4 @@
-package middleware
+package httpmiddleware
 
 import "go_hex/internal/support/errors"
 

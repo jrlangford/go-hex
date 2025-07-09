@@ -1,4 +1,4 @@
-package http
+package httpadapter
 
 import (
 	"encoding/json"

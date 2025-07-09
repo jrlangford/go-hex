@@ -1,11 +1,11 @@
-package http
+package httpadapter
 
 import (
 	"encoding/json"
 	"fmt"
-	"go_hex/internal/adapters/driving/http/middleware"
+	"go_hex/internal/adapters/driving/httpadapter/httpmiddleware"
 	"go_hex/internal/booking/bookingdomain"
-	bookingPorts "go_hex/internal/booking/ports/bookingprimary"
+	"go_hex/internal/booking/ports/bookingprimary"
 	"go_hex/internal/handling/handlingdomain"
 	"go_hex/internal/handling/ports/handlingprimary"
 	"go_hex/internal/routing/ports/routingprimary"
@@ -20,8 +20,8 @@ import (
 
 // Handler is the main HTTP handler for the cargo shipping application.
 type Handler struct {
-	authMiddleware        *middleware.AuthMiddleware
-	bookingService        bookingPorts.BookingService
+	authMiddleware        *httpmiddleware.AuthMiddleware
+	bookingService        bookingprimary.BookingService
 	routingService        routingprimary.RouteFinder
 	handlingReportService handlingprimary.HandlingReportService
 	handlingQueryService  handlingprimary.HandlingEventQueryService
@@ -29,8 +29,8 @@ type Handler struct {
 
 // NewHandler creates a new HTTP handler with the given services and middleware.
 func NewHandler(
-	authMiddleware *middleware.AuthMiddleware,
-	bookingService bookingPorts.BookingService,
+	authMiddleware *httpmiddleware.AuthMiddleware,
+	bookingService bookingprimary.BookingService,
 	routingService routingprimary.RouteFinder,
 	handlingReportService handlingprimary.HandlingReportService,
 	handlingQueryService handlingprimary.HandlingEventQueryService,
@@ -549,7 +549,7 @@ func (h *Handler) AuthMeHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	// Extract claims from context
-	claims := middleware.GetTokenClaims(r.Context())
+	claims := httpmiddleware.GetTokenClaims(r.Context())
 	if claims == nil {
 		h.writeErrorResponse(w, "unauthorized", "Authentication required", http.StatusUnauthorized)
 		return

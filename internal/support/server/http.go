@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
-	httpadapter "go_hex/internal/adapters/driving/http"
+	"go_hex/internal/adapters/driving/httpadapter"
 	"go_hex/internal/support/config"
 	"go_hex/internal/support/logging"
 	"net/http"
