@@ -17,8 +17,8 @@ import (
 
 	"go_hex/internal/booking/bookingapplication"
 	"go_hex/internal/booking/bookingdomain"
-	handlingApp "go_hex/internal/handling/application"
-	handlingDomain "go_hex/internal/handling/domain"
+	"go_hex/internal/handling/handlingapplication"
+	"go_hex/internal/handling/handlingdomain"
 	routingApp "go_hex/internal/routing/application"
 )
 
@@ -67,7 +67,7 @@ func TestCargoShippingSystemIntegration(t *testing.T) {
 	)
 
 	// Create Handling context application services
-	handlingReportService := handlingApp.NewHandlingReportService(
+	handlingReportService := handlingapplication.NewHandlingReportService(
 		handlingEventRepo,
 		eventBus, // Event publisher for handling events
 		logger,
@@ -78,7 +78,7 @@ func TestCargoShippingSystemIntegration(t *testing.T) {
 
 	// Subscribe to handling events
 	eventBus.Subscribe(
-		handlingDomain.HandlingEventRegisteredEvent{}.EventName(),
+		handlingdomain.HandlingEventRegisteredEvent{}.EventName(),
 		handlingToBookingHandler.HandleCargoWasHandled,
 	)
 
@@ -123,9 +123,9 @@ func TestCargoShippingSystemIntegration(t *testing.T) {
 
 	// Test 4: Submit handling report (Handling->Booking asynchronous integration)
 	t.Log("Test 4: Submitting handling report")
-	handlingReport := handlingDomain.HandlingReport{
+	handlingReport := handlingdomain.HandlingReport{
 		TrackingId:     cargo.GetTrackingId().String(),
-		EventType:      string(handlingDomain.HandlingEventTypeLoad),
+		EventType:      string(handlingdomain.HandlingEventTypeLoad),
 		Location:       "SESTO",
 		VoyageNumber:   "V001",
 		CompletionTime: time.Now().Format(time.RFC3339),

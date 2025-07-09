@@ -9,8 +9,8 @@ import (
 
 	"go_hex/internal/booking/bookingdomain"
 	"go_hex/internal/booking/ports/bookingprimary"
-	handlingDomain "go_hex/internal/handling/domain"
-	handlingPrimary "go_hex/internal/handling/ports/primary"
+	"go_hex/internal/handling/handlingdomain"
+	"go_hex/internal/handling/ports/handlingprimary"
 )
 
 // ScenarioExecutor runs test scenarios against the application services
@@ -28,7 +28,7 @@ func NewScenarioExecutor(env *TestEnvironment) *ScenarioExecutor {
 }
 
 // ExecuteCargoScenario runs a complete cargo shipping scenario
-func (se *ScenarioExecutor) ExecuteCargoScenario(ctx context.Context, scenario CargoTestData, bookingService bookingprimary.BookingService, handlingService handlingPrimary.HandlingReportService) error {
+func (se *ScenarioExecutor) ExecuteCargoScenario(ctx context.Context, scenario CargoTestData, bookingService bookingprimary.BookingService, handlingService handlingprimary.HandlingReportService) error {
 
 	se.logger.Info("Executing cargo scenario",
 		"origin", scenario.Origin,
@@ -81,7 +81,7 @@ func (se *ScenarioExecutor) ExecuteCargoScenario(ctx context.Context, scenario C
 		}
 
 		// Submit handling report
-		handlingReport := handlingDomain.HandlingReport{
+		handlingReport := handlingdomain.HandlingReport{
 			TrackingId:     cargo.GetTrackingId().String(),
 			EventType:      string(eventData.EventType),
 			Location:       eventData.Location,
@@ -118,7 +118,7 @@ func (se *ScenarioExecutor) ExecuteCargoScenario(ctx context.Context, scenario C
 }
 
 // ExecuteAllScenarios runs all generated cargo scenarios
-func (se *ScenarioExecutor) ExecuteAllScenarios(ctx context.Context, bookingService bookingprimary.BookingService, handlingService handlingPrimary.HandlingReportService) error {
+func (se *ScenarioExecutor) ExecuteAllScenarios(ctx context.Context, bookingService bookingprimary.BookingService, handlingService handlingprimary.HandlingReportService) error {
 
 	scenarios := se.env.GetTestScenarios()
 	se.logger.Info("Executing all cargo scenarios", "count", len(scenarios))
@@ -153,11 +153,11 @@ func (se *ScenarioExecutor) GenerateHandlingEventsForCargo(cargo bookingdomain.C
 	currentTime := time.Now().Add(-2 * time.Hour) // Start events in the past
 
 	// Generate realistic event progression
-	eventTypes := []handlingDomain.HandlingEventType{
-		handlingDomain.HandlingEventTypeReceive,
-		handlingDomain.HandlingEventTypeLoad,
-		handlingDomain.HandlingEventTypeUnload,
-		handlingDomain.HandlingEventTypeClaim,
+	eventTypes := []handlingdomain.HandlingEventType{
+		handlingdomain.HandlingEventTypeReceive,
+		handlingdomain.HandlingEventTypeLoad,
+		handlingdomain.HandlingEventTypeUnload,
+		handlingdomain.HandlingEventTypeClaim,
 	}
 
 	for i := 0; i < eventCount && i < len(eventTypes); i++ {
@@ -167,7 +167,7 @@ func (se *ScenarioExecutor) GenerateHandlingEventsForCargo(cargo bookingdomain.C
 		}
 
 		voyageNumber := ""
-		if eventTypes[i] == handlingDomain.HandlingEventTypeLoad || eventTypes[i] == handlingDomain.HandlingEventTypeUnload {
+		if eventTypes[i] == handlingdomain.HandlingEventTypeLoad || eventTypes[i] == handlingdomain.HandlingEventTypeUnload {
 			// Use a generated voyage number for load/unload events
 			voyageNumber = fmt.Sprintf("V%03d", generator.random.Intn(999)+1)
 		}

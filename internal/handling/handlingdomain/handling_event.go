@@ -1,4 +1,4 @@
-package domain
+package handlingdomain
 
 import (
 	"go_hex/internal/support/basedomain"

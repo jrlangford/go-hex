@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"go_hex/internal/booking/bookingdomain"
-	handlingDomain "go_hex/internal/handling/domain"
+	"go_hex/internal/handling/handlingdomain"
 	"go_hex/internal/support/auth"
 
 	"github.com/stretchr/testify/assert"
@@ -81,7 +81,7 @@ type MockHandlingReportService struct {
 	mock.Mock
 }
 
-func (m *MockHandlingReportService) SubmitHandlingReport(ctx context.Context, report handlingDomain.HandlingReport) error {
+func (m *MockHandlingReportService) SubmitHandlingReport(ctx context.Context, report handlingdomain.HandlingReport) error {
 	args := m.Called(ctx, report)
 	return args.Error(0)
 }
@@ -90,19 +90,19 @@ type MockHandlingQueryService struct {
 	mock.Mock
 }
 
-func (m *MockHandlingQueryService) ListAllHandlingEvents(ctx context.Context) ([]handlingDomain.HandlingEvent, error) {
+func (m *MockHandlingQueryService) ListAllHandlingEvents(ctx context.Context) ([]handlingdomain.HandlingEvent, error) {
 	args := m.Called(ctx)
-	return args.Get(0).([]handlingDomain.HandlingEvent), args.Error(1)
+	return args.Get(0).([]handlingdomain.HandlingEvent), args.Error(1)
 }
 
-func (m *MockHandlingQueryService) GetHandlingHistory(ctx context.Context, trackingId string) (handlingDomain.HandlingHistory, error) {
+func (m *MockHandlingQueryService) GetHandlingHistory(ctx context.Context, trackingId string) (handlingdomain.HandlingHistory, error) {
 	args := m.Called(ctx, trackingId)
-	return args.Get(0).(handlingDomain.HandlingHistory), args.Error(1)
+	return args.Get(0).(handlingdomain.HandlingHistory), args.Error(1)
 }
 
-func (m *MockHandlingQueryService) GetHandlingEvent(ctx context.Context, eventId handlingDomain.HandlingEventId) (handlingDomain.HandlingEvent, error) {
+func (m *MockHandlingQueryService) GetHandlingEvent(ctx context.Context, eventId handlingdomain.HandlingEventId) (handlingdomain.HandlingEvent, error) {
 	args := m.Called(ctx, eventId)
-	return args.Get(0).(handlingDomain.HandlingEvent), args.Error(1)
+	return args.Get(0).(handlingdomain.HandlingEvent), args.Error(1)
 }
 
 func TestBookCargoHandler(t *testing.T) {

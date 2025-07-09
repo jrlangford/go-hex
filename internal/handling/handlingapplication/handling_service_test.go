@@ -1,4 +1,4 @@
-package application
+package handlingapplication
 
 import (
 	"context"
@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"go_hex/internal/handling/domain"
-	"go_hex/internal/handling/ports/primary"
+	"go_hex/internal/handling/handlingdomain"
+	"go_hex/internal/handling/ports/handlingprimary"
 	"go_hex/internal/support/auth"
 	"go_hex/internal/support/basedomain"
 
@@ -23,24 +23,24 @@ type MockHandlingEventRepository struct {
 	mock.Mock
 }
 
-func (m *MockHandlingEventRepository) Store(event domain.HandlingEvent) error {
+func (m *MockHandlingEventRepository) Store(event handlingdomain.HandlingEvent) error {
 	args := m.Called(event)
 	return args.Error(0)
 }
 
-func (m *MockHandlingEventRepository) FindByTrackingId(trackingId string) ([]domain.HandlingEvent, error) {
+func (m *MockHandlingEventRepository) FindByTrackingId(trackingId string) ([]handlingdomain.HandlingEvent, error) {
 	args := m.Called(trackingId)
-	return args.Get(0).([]domain.HandlingEvent), args.Error(1)
+	return args.Get(0).([]handlingdomain.HandlingEvent), args.Error(1)
 }
 
-func (m *MockHandlingEventRepository) FindAll() ([]domain.HandlingEvent, error) {
+func (m *MockHandlingEventRepository) FindAll() ([]handlingdomain.HandlingEvent, error) {
 	args := m.Called()
-	return args.Get(0).([]domain.HandlingEvent), args.Error(1)
+	return args.Get(0).([]handlingdomain.HandlingEvent), args.Error(1)
 }
 
-func (m *MockHandlingEventRepository) FindById(id domain.HandlingEventId) (domain.HandlingEvent, error) {
+func (m *MockHandlingEventRepository) FindById(id handlingdomain.HandlingEventId) (handlingdomain.HandlingEvent, error) {
 	args := m.Called(id)
-	return args.Get(0).(domain.HandlingEvent), args.Error(1)
+	return args.Get(0).(handlingdomain.HandlingEvent), args.Error(1)
 }
 
 type MockHandlingEventPublisher struct {
@@ -53,7 +53,7 @@ func (m *MockHandlingEventPublisher) Publish(event basedomain.DomainEvent) error
 }
 
 func TestHandlingReportService_SubmitHandlingReport(t *testing.T) {
-	setup := func() (primary.HandlingReportService, *MockHandlingEventRepository, *MockHandlingEventPublisher) {
+	setup := func() (handlingprimary.HandlingReportService, *MockHandlingEventRepository, *MockHandlingEventPublisher) {
 		repo := &MockHandlingEventRepository{}
 		publisher := &MockHandlingEventPublisher{}
 
@@ -70,14 +70,14 @@ func TestHandlingReportService_SubmitHandlingReport(t *testing.T) {
 		service, repo, publisher := setup()
 
 		// Setup mocks
-		repo.On("Store", mock.AnythingOfType("domain.HandlingEvent")).Return(nil)
+		repo.On("Store", mock.AnythingOfType("handlingdomain.HandlingEvent")).Return(nil)
 		publisher.On("Publish", mock.Anything).Return(nil)
 
 		// Create context with valid claims
 		ctx := createContextWithClaims(t, []string{})
 
 		// Create test report
-		report := domain.HandlingReport{
+		report := handlingdomain.HandlingReport{
 			TrackingId:     "TEST123",
 			EventType:      "RECEIVE",
 			Location:       "USNYC",
@@ -100,7 +100,7 @@ func TestHandlingReportService_SubmitHandlingReport(t *testing.T) {
 		// Create context without proper claims
 		ctx := context.Background()
 
-		report := domain.HandlingReport{
+		report := handlingdomain.HandlingReport{
 			TrackingId:     "TEST123",
 			EventType:      "RECEIVE",
 			Location:       "USNYC",
@@ -122,7 +122,7 @@ func TestHandlingReportService_SubmitHandlingReport(t *testing.T) {
 		// Create context with valid claims
 		ctx := createContextWithClaims(t, []string{})
 
-		report := domain.HandlingReport{
+		report := handlingdomain.HandlingReport{
 			TrackingId:     "TEST123",
 			EventType:      "RECEIVE",
 			Location:       "USNYC",
@@ -142,12 +142,12 @@ func TestHandlingReportService_SubmitHandlingReport(t *testing.T) {
 		service, repo, _ := setup()
 
 		// Setup mocks
-		repo.On("Store", mock.AnythingOfType("domain.HandlingEvent")).Return(errors.New("storage error"))
+		repo.On("Store", mock.AnythingOfType("handlingdomain.HandlingEvent")).Return(errors.New("storage error"))
 
 		// Create context with valid claims
 		ctx := createContextWithClaims(t, []string{})
 
-		report := domain.HandlingReport{
+		report := handlingdomain.HandlingReport{
 			TrackingId:     "TEST123",
 			EventType:      "RECEIVE",
 			Location:       "USNYC",
@@ -170,7 +170,7 @@ func TestHandlingReportService_SubmitHandlingReport(t *testing.T) {
 		// Create context with valid claims
 		ctx := createContextWithClaims(t, []string{})
 
-		report := domain.HandlingReport{
+		report := handlingdomain.HandlingReport{
 			TrackingId:     "TEST123",
 			EventType:      "INVALID_TYPE",
 			Location:       "USNYC",
@@ -192,7 +192,7 @@ func TestHandlingReportService_SubmitHandlingReport(t *testing.T) {
 		// Create context with valid claims
 		ctx := createContextWithClaims(t, []string{})
 
-		report := domain.HandlingReport{
+		report := handlingdomain.HandlingReport{
 			TrackingId:     "TEST123",
 			EventType:      "LOAD",
 			Location:       "USNYC",
@@ -210,7 +210,7 @@ func TestHandlingReportService_SubmitHandlingReport(t *testing.T) {
 }
 
 func TestHandlingEventQueryService_GetHandlingHistory(t *testing.T) {
-	setup := func() (primary.HandlingEventQueryService, *MockHandlingEventRepository) {
+	setup := func() (handlingprimary.HandlingEventQueryService, *MockHandlingEventRepository) {
 		repo := &MockHandlingEventRepository{}
 
 		jsonHandler := slog.NewJSONHandler(os.Stdout, nil)
@@ -262,7 +262,7 @@ func TestHandlingEventQueryService_GetHandlingHistory(t *testing.T) {
 		service, repo := setup()
 
 		// Setup mocks
-		repo.On("FindByTrackingId", "TEST123").Return([]domain.HandlingEvent{}, errors.New("repository error"))
+		repo.On("FindByTrackingId", "TEST123").Return([]handlingdomain.HandlingEvent{}, errors.New("repository error"))
 
 		// Create context with valid claims
 		ctx := createContextWithClaims(t, []string{})
@@ -278,7 +278,7 @@ func TestHandlingEventQueryService_GetHandlingHistory(t *testing.T) {
 }
 
 func TestHandlingEventQueryService_ListAllHandlingEvents(t *testing.T) {
-	setup := func() (primary.HandlingEventQueryService, *MockHandlingEventRepository) {
+	setup := func() (handlingprimary.HandlingEventQueryService, *MockHandlingEventRepository) {
 		repo := &MockHandlingEventRepository{}
 
 		jsonHandler := slog.NewJSONHandler(os.Stdout, nil)
@@ -329,7 +329,7 @@ func TestHandlingEventQueryService_ListAllHandlingEvents(t *testing.T) {
 		service, repo := setup()
 
 		// Setup mocks
-		repo.On("FindAll").Return([]domain.HandlingEvent{}, errors.New("repository error"))
+		repo.On("FindAll").Return([]handlingdomain.HandlingEvent{}, errors.New("repository error"))
 
 		// Create context with valid claims
 		ctx := createContextWithClaims(t, []string{})
@@ -345,7 +345,7 @@ func TestHandlingEventQueryService_ListAllHandlingEvents(t *testing.T) {
 }
 
 func TestHandlingEventQueryService_GetHandlingEvent(t *testing.T) {
-	setup := func() (primary.HandlingEventQueryService, *MockHandlingEventRepository) {
+	setup := func() (handlingprimary.HandlingEventQueryService, *MockHandlingEventRepository) {
 		repo := &MockHandlingEventRepository{}
 
 		jsonHandler := slog.NewJSONHandler(os.Stdout, nil)
@@ -382,7 +382,7 @@ func TestHandlingEventQueryService_GetHandlingEvent(t *testing.T) {
 	t.Run("should fail with unauthorized context", func(t *testing.T) {
 		service, _ := setup()
 
-		eventId := domain.NewHandlingEventId()
+		eventId := handlingdomain.NewHandlingEventId()
 		ctx := context.Background()
 
 		// Execute
@@ -396,10 +396,10 @@ func TestHandlingEventQueryService_GetHandlingEvent(t *testing.T) {
 	t.Run("should fail when event not found", func(t *testing.T) {
 		service, repo := setup()
 
-		eventId := domain.NewHandlingEventId()
+		eventId := handlingdomain.NewHandlingEventId()
 
 		// Setup mocks
-		repo.On("FindById", eventId).Return(domain.HandlingEvent{}, errors.New("not found"))
+		repo.On("FindById", eventId).Return(handlingdomain.HandlingEvent{}, errors.New("not found"))
 
 		// Create context with valid claims
 		ctx := createContextWithClaims(t, []string{})
@@ -430,10 +430,10 @@ func createContextWithClaims(t *testing.T, permissions []string) context.Context
 	return context.WithValue(context.Background(), auth.ClaimsContextKey, claims)
 }
 
-func createTestHandlingEvent(t *testing.T) domain.HandlingEvent {
-	event, err := domain.NewHandlingEvent(
+func createTestHandlingEvent(t *testing.T) handlingdomain.HandlingEvent {
+	event, err := handlingdomain.NewHandlingEvent(
 		"TEST123",
-		domain.HandlingEventTypeReceive,
+		handlingdomain.HandlingEventTypeReceive,
 		"USNYC",
 		"",
 		time.Now().Add(-time.Hour),
@@ -442,17 +442,17 @@ func createTestHandlingEvent(t *testing.T) domain.HandlingEvent {
 	return event
 }
 
-func createTestHandlingEvents(t *testing.T) []domain.HandlingEvent {
+func createTestHandlingEvents(t *testing.T) []handlingdomain.HandlingEvent {
 	baseTime := time.Now().Add(-3 * time.Hour)
 
-	receive, err := domain.NewHandlingEvent("TEST123", domain.HandlingEventTypeReceive, "USNYC", "", baseTime)
+	receive, err := handlingdomain.NewHandlingEvent("TEST123", handlingdomain.HandlingEventTypeReceive, "USNYC", "", baseTime)
 	require.NoError(t, err)
 
-	load, err := domain.NewHandlingEvent("TEST123", domain.HandlingEventTypeLoad, "USNYC", "V001", baseTime.Add(time.Hour))
+	load, err := handlingdomain.NewHandlingEvent("TEST123", handlingdomain.HandlingEventTypeLoad, "USNYC", "V001", baseTime.Add(time.Hour))
 	require.NoError(t, err)
 
-	unload, err := domain.NewHandlingEvent("TEST123", domain.HandlingEventTypeUnload, "DEHAM", "V001", baseTime.Add(2*time.Hour))
+	unload, err := handlingdomain.NewHandlingEvent("TEST123", handlingdomain.HandlingEventTypeUnload, "DEHAM", "V001", baseTime.Add(2*time.Hour))
 	require.NoError(t, err)
 
-	return []domain.HandlingEvent{receive, load, unload}
+	return []handlingdomain.HandlingEvent{receive, load, unload}
 }

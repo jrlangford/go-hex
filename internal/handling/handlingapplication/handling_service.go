@@ -1,4 +1,4 @@
-package application
+package handlingapplication
 
 import (
 	"context"
@@ -6,25 +6,25 @@ import (
 	"log/slog"
 	"time"
 
-	"go_hex/internal/handling/domain"
-	"go_hex/internal/handling/ports/primary"
-	"go_hex/internal/handling/ports/secondary"
+	"go_hex/internal/handling/handlingdomain"
+	"go_hex/internal/handling/ports/handlingprimary"
+	"go_hex/internal/handling/ports/handlingsecondary"
 	"go_hex/internal/support/auth"
 )
 
 // HandlingReportService implements the primary port for handling reports
 type HandlingReportService struct {
-	handlingEventRepo secondary.HandlingEventRepository
-	eventPublisher    secondary.EventPublisher
+	handlingEventRepo handlingsecondary.HandlingEventRepository
+	eventPublisher    handlingsecondary.EventPublisher
 	logger            *slog.Logger
 }
 
 // NewHandlingReportService creates a new handling report service instance
 func NewHandlingReportService(
-	handlingEventRepo secondary.HandlingEventRepository,
-	eventPublisher secondary.EventPublisher,
+	handlingEventRepo handlingsecondary.HandlingEventRepository,
+	eventPublisher handlingsecondary.EventPublisher,
 	logger *slog.Logger,
-) primary.HandlingReportService {
+) handlingprimary.HandlingReportService {
 	return &HandlingReportService{
 		handlingEventRepo: handlingEventRepo,
 		eventPublisher:    eventPublisher,
@@ -33,7 +33,7 @@ func NewHandlingReportService(
 }
 
 // SubmitHandlingReport processes a handling report from external systems
-func (h *HandlingReportService) SubmitHandlingReport(ctx context.Context, report domain.HandlingReport) error {
+func (h *HandlingReportService) SubmitHandlingReport(ctx context.Context, report handlingdomain.HandlingReport) error {
 	h.logger.Info("Processing handling report",
 		"trackingId", report.TrackingId,
 		"eventType", report.EventType,
@@ -59,10 +59,10 @@ func (h *HandlingReportService) SubmitHandlingReport(ctx context.Context, report
 	}
 
 	// Convert string event type to domain event type
-	eventType := domain.HandlingEventType(report.EventType)
+	eventType := handlingdomain.HandlingEventType(report.EventType)
 
 	// Create handling event domain object
-	handlingEvent, err := domain.NewHandlingEvent(
+	handlingEvent, err := handlingdomain.NewHandlingEvent(
 		report.TrackingId,
 		eventType,
 		report.Location,
@@ -97,15 +97,15 @@ func (h *HandlingReportService) SubmitHandlingReport(ctx context.Context, report
 
 // HandlingEventQueryService implements the primary port for querying handling events
 type HandlingEventQueryService struct {
-	handlingEventRepo secondary.HandlingEventRepository
+	handlingEventRepo handlingsecondary.HandlingEventRepository
 	logger            *slog.Logger
 }
 
 // NewHandlingEventQueryService creates a new handling event query service instance
 func NewHandlingEventQueryService(
-	handlingEventRepo secondary.HandlingEventRepository,
+	handlingEventRepo handlingsecondary.HandlingEventRepository,
 	logger *slog.Logger,
-) primary.HandlingEventQueryService {
+) handlingprimary.HandlingEventQueryService {
 	return &HandlingEventQueryService{
 		handlingEventRepo: handlingEventRepo,
 		logger:            logger,
@@ -113,30 +113,30 @@ func NewHandlingEventQueryService(
 }
 
 // GetHandlingHistory retrieves the complete handling history for a cargo
-func (h *HandlingEventQueryService) GetHandlingHistory(ctx context.Context, trackingId string) (domain.HandlingHistory, error) {
+func (h *HandlingEventQueryService) GetHandlingHistory(ctx context.Context, trackingId string) (handlingdomain.HandlingHistory, error) {
 	h.logger.Info("Retrieving handling history", "trackingId", trackingId)
 
 	// Check permissions
 	claims, err := auth.ExtractClaims(ctx)
 	if err != nil {
 		h.logger.Warn("Unauthorized handling history access attempt", "error", err)
-		return domain.HandlingHistory{}, fmt.Errorf("unauthorized handling history access: %w", err)
+		return handlingdomain.HandlingHistory{}, fmt.Errorf("unauthorized handling history access: %w", err)
 	}
 	if err := RequireHandlingPermission(claims, auth.PermissionViewHandling); err != nil {
 		h.logger.Warn("Unauthorized handling history access attempt", "error", err)
-		return domain.HandlingHistory{}, fmt.Errorf("unauthorized handling history access: %w", err)
+		return handlingdomain.HandlingHistory{}, fmt.Errorf("unauthorized handling history access: %w", err)
 	}
 
 	events, err := h.handlingEventRepo.FindByTrackingId(trackingId)
 	if err != nil {
 		h.logger.Error("Failed to find handling events", "error", err, "trackingId", trackingId)
-		return domain.HandlingHistory{}, fmt.Errorf("failed to find handling events for tracking ID %s: %w", trackingId, err)
+		return handlingdomain.HandlingHistory{}, fmt.Errorf("failed to find handling events for tracking ID %s: %w", trackingId, err)
 	}
 
-	history, err := domain.NewHandlingHistory(trackingId, events)
+	history, err := handlingdomain.NewHandlingHistory(trackingId, events)
 	if err != nil {
 		h.logger.Error("Failed to create handling history", "error", err, "trackingId", trackingId)
-		return domain.HandlingHistory{}, fmt.Errorf("failed to create handling history: %w", err)
+		return handlingdomain.HandlingHistory{}, fmt.Errorf("failed to create handling history: %w", err)
 	}
 
 	h.logger.Info("Handling history retrieved successfully", "trackingId", trackingId, "eventCount", len(events))
@@ -144,7 +144,7 @@ func (h *HandlingEventQueryService) GetHandlingHistory(ctx context.Context, trac
 }
 
 // ListAllHandlingEvents retrieves all handling events from the repository
-func (h *HandlingEventQueryService) ListAllHandlingEvents(ctx context.Context) ([]domain.HandlingEvent, error) {
+func (h *HandlingEventQueryService) ListAllHandlingEvents(ctx context.Context) ([]handlingdomain.HandlingEvent, error) {
 	h.logger.Info("Retrieving all handling events")
 
 	// Check permissions
@@ -169,24 +169,24 @@ func (h *HandlingEventQueryService) ListAllHandlingEvents(ctx context.Context) (
 }
 
 // GetHandlingEvent retrieves a specific handling event by ID
-func (h *HandlingEventQueryService) GetHandlingEvent(ctx context.Context, eventId domain.HandlingEventId) (domain.HandlingEvent, error) {
+func (h *HandlingEventQueryService) GetHandlingEvent(ctx context.Context, eventId handlingdomain.HandlingEventId) (handlingdomain.HandlingEvent, error) {
 	h.logger.Info("Retrieving handling event by ID", "eventId", eventId.String())
 
 	// Check permissions
 	claims, err := auth.ExtractClaims(ctx)
 	if err != nil {
 		h.logger.Warn("Unauthorized handling event access attempt", "error", err)
-		return domain.HandlingEvent{}, fmt.Errorf("unauthorized handling event access: %w", err)
+		return handlingdomain.HandlingEvent{}, fmt.Errorf("unauthorized handling event access: %w", err)
 	}
 	if err := RequireHandlingPermission(claims, auth.PermissionViewHandling); err != nil {
 		h.logger.Warn("Unauthorized handling event access attempt", "error", err)
-		return domain.HandlingEvent{}, fmt.Errorf("unauthorized handling event access: %w", err)
+		return handlingdomain.HandlingEvent{}, fmt.Errorf("unauthorized handling event access: %w", err)
 	}
 
 	event, err := h.handlingEventRepo.FindById(eventId)
 	if err != nil {
 		h.logger.Error("Failed to find handling event", "error", err, "eventId", eventId.String())
-		return domain.HandlingEvent{}, fmt.Errorf("failed to find handling event with ID %s: %w", eventId.String(), err)
+		return handlingdomain.HandlingEvent{}, fmt.Errorf("failed to find handling event with ID %s: %w", eventId.String(), err)
 	}
 
 	h.logger.Info("Handling event retrieved successfully", "eventId", eventId.String())

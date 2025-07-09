@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"go_hex/internal/booking/bookingdomain"
-	handlingDomain "go_hex/internal/handling/domain"
+	handlingDomain "go_hex/internal/handling/handlingdomain"
 	routingDomain "go_hex/internal/routing/domain"
 )
 

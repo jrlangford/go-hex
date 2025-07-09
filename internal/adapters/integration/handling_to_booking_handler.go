@@ -6,7 +6,7 @@ import (
 
 	"go_hex/internal/booking/bookingdomain"
 	"go_hex/internal/booking/ports/bookingprimary"
-	handlingDomain "go_hex/internal/handling/domain"
+	"go_hex/internal/handling/handlingdomain"
 	"go_hex/internal/support/basedomain"
 )
 
@@ -33,7 +33,7 @@ func (h *HandlingToBookingEventHandler) HandleCargoWasHandled(ctx context.Contex
 	h.logger.Info("Handling HandlingEventRegistered event", "event_id", event.EventName())
 
 	// Cast to specific event type (Anti-Corruption Layer)
-	handlingEvent, ok := event.(handlingDomain.HandlingEventRegisteredEvent)
+	handlingEvent, ok := event.(handlingdomain.HandlingEventRegisteredEvent)
 	if !ok {
 		h.logger.Error("Invalid event type for HandlingEventRegistered handler")
 		return bookingdomain.NewDomainValidationError("invalid event type", nil)

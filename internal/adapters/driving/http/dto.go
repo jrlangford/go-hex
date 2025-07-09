@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"go_hex/internal/booking/bookingdomain"
-	handlingDomain "go_hex/internal/handling/domain"
+	"go_hex/internal/handling/handlingdomain"
 	routingDomain "go_hex/internal/routing/domain"
 )
 
@@ -183,7 +183,7 @@ func BookCargoToResponse(cargo bookingdomain.Cargo) BookCargoResponse {
 
 // Additional DTO conversion helper functions
 
-func HandlingEventToDTO(event handlingDomain.HandlingEvent) HandlingEventDTO {
+func HandlingEventToDTO(event handlingdomain.HandlingEvent) HandlingEventDTO {
 	return HandlingEventDTO{
 		EventId:        event.GetEventId().String(),
 		EventType:      string(event.GetEventType()),

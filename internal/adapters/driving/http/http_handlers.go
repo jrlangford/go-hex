@@ -6,8 +6,8 @@ import (
 	"go_hex/internal/adapters/driving/http/middleware"
 	"go_hex/internal/booking/bookingdomain"
 	bookingPorts "go_hex/internal/booking/ports/bookingprimary"
-	handlingDomain "go_hex/internal/handling/domain"
-	handlingPrimary "go_hex/internal/handling/ports/primary"
+	"go_hex/internal/handling/handlingdomain"
+	"go_hex/internal/handling/ports/handlingprimary"
 	routingDomain "go_hex/internal/routing/domain"
 	routingPorts "go_hex/internal/routing/ports/primary"
 	"go_hex/internal/support/validation"
@@ -23,8 +23,8 @@ type Handler struct {
 	authMiddleware        *middleware.AuthMiddleware
 	bookingService        bookingPorts.BookingService
 	routingService        routingPorts.RouteFinder
-	handlingReportService handlingPrimary.HandlingReportService
-	handlingQueryService  handlingPrimary.HandlingEventQueryService
+	handlingReportService handlingprimary.HandlingReportService
+	handlingQueryService  handlingprimary.HandlingEventQueryService
 }
 
 // NewHandler creates a new HTTP handler with the given services and middleware.
@@ -32,8 +32,8 @@ func NewHandler(
 	authMiddleware *middleware.AuthMiddleware,
 	bookingService bookingPorts.BookingService,
 	routingService routingPorts.RouteFinder,
-	handlingReportService handlingPrimary.HandlingReportService,
-	handlingQueryService handlingPrimary.HandlingEventQueryService,
+	handlingReportService handlingprimary.HandlingReportService,
+	handlingQueryService handlingprimary.HandlingEventQueryService,
 ) *Handler {
 	return &Handler{
 		authMiddleware:        authMiddleware,
@@ -314,7 +314,7 @@ func (h *Handler) SubmitHandlingReportHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	// Submit handling report
-	report := handlingDomain.HandlingReport{
+	report := handlingdomain.HandlingReport{
 		TrackingId:     req.TrackingId,
 		EventType:      req.EventType,
 		Location:       req.Location,
@@ -618,7 +618,7 @@ func LocationToResponse(location interface{}) LocationResponse {
 
 func HandlingEventToResponse(event interface{}) HandlingEventResponse {
 	// Type assert to proper domain type
-	if e, ok := event.(handlingDomain.HandlingEvent); ok {
+	if e, ok := event.(handlingdomain.HandlingEvent); ok {
 		return HandlingEventResponse{
 			EventId:        e.GetEventId().String(),
 			TrackingId:     e.GetTrackingId(),

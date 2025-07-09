@@ -1,4 +1,4 @@
-package domain
+package handlingdomain
 
 import (
 	"go_hex/internal/support/basedomain"
@@ -337,7 +337,7 @@ func createTestHandlingEventAfter(t *testing.T, previousEvent HandlingEvent, eve
 	// Add time but ensure it's still in the past - use min of 30 minutes after previous event or 30 minutes ago
 	timeSincePrevious := previousEvent.GetCompletionTime().Add(30 * time.Minute)
 	thirtyMinsAgo := time.Now().Add(-30 * time.Minute)
-	
+
 	var completionTime time.Time
 	if timeSincePrevious.Before(thirtyMinsAgo) {
 		completionTime = timeSincePrevious

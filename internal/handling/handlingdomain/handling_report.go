@@ -1,4 +1,4 @@
-package domain
+package handlingdomain
 
 // HandlingReport represents raw data from external systems (Data Transfer Object)
 // This is the Anti-Corruption Layer input format

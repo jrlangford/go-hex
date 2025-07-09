@@ -1,4 +1,4 @@
-package application
+package handlingapplication
 
 import (
 	"go_hex/internal/support/auth"

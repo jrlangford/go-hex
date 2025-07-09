@@ -1,4 +1,4 @@
-package mock
+package handlingmock
 
 import (
 	"context"
@@ -7,32 +7,32 @@ import (
 	"math/rand"
 	"time"
 
-	"go_hex/internal/handling/application"
-	"go_hex/internal/handling/domain"
-	"go_hex/internal/handling/ports/primary"
-	"go_hex/internal/handling/ports/secondary"
+	"go_hex/internal/handling/handlingapplication"
+	"go_hex/internal/handling/handlingdomain"
+	"go_hex/internal/handling/ports/handlingprimary"
+	"go_hex/internal/handling/ports/handlingsecondary"
 	"go_hex/internal/support/auth"
 )
 
 // MockHandlingApplication embeds the real application service but provides test data population capabilities
 type MockHandlingApplication struct {
-	*application.HandlingReportService
+	*handlingapplication.HandlingReportService
 	logger            *slog.Logger
 	random            *rand.Rand
-	handlingEventRepo secondary.HandlingEventRepository
+	handlingEventRepo handlingsecondary.HandlingEventRepository
 }
 
 // NewMockHandlingApplication creates a mock handling application with embedded real application service
 func NewMockHandlingApplication(
-	handlingEventRepo secondary.HandlingEventRepository,
-	eventPublisher secondary.EventPublisher,
+	handlingEventRepo handlingsecondary.HandlingEventRepository,
+	eventPublisher handlingsecondary.EventPublisher,
 	logger *slog.Logger,
 	seed int64,
 ) *MockHandlingApplication {
-	realApp := application.NewHandlingReportService(handlingEventRepo, eventPublisher, logger)
+	realApp := handlingapplication.NewHandlingReportService(handlingEventRepo, eventPublisher, logger)
 
 	return &MockHandlingApplication{
-		HandlingReportService: realApp.(*application.HandlingReportService),
+		HandlingReportService: realApp.(*handlingapplication.HandlingReportService),
 		logger:                logger,
 		random:                rand.New(rand.NewSource(seed)),
 		handlingEventRepo:     handlingEventRepo,
@@ -40,13 +40,13 @@ func NewMockHandlingApplication(
 }
 
 // PopulateTestHandlingEvents creates test handling events using business logic through the application layer
-func (m *MockHandlingApplication) PopulateTestHandlingEvents(ctx context.Context, scenarios []TestHandlingScenario) ([]domain.HandlingEvent, error) {
+func (m *MockHandlingApplication) PopulateTestHandlingEvents(ctx context.Context, scenarios []TestHandlingScenario) ([]handlingdomain.HandlingEvent, error) {
 	m.logger.Info("Populating test handling events through handling application", "scenarios", len(scenarios))
 
 	// Create authenticated context for internal operations
 	testCtx := m.createTestContext(ctx)
 
-	var events []domain.HandlingEvent
+	var events []handlingdomain.HandlingEvent
 
 	for _, scenario := range scenarios {
 		for _, eventSpec := range scenario.EventSequence {
@@ -56,7 +56,7 @@ func (m *MockHandlingApplication) PopulateTestHandlingEvents(ctx context.Context
 			completionTime := time.Now().Add(-time.Duration(hoursAgo) * time.Hour)
 
 			// Create handling report for submission
-			report := domain.HandlingReport{
+			report := handlingdomain.HandlingReport{
 				TrackingId:     scenario.TrackingId,
 				EventType:      string(eventSpec.EventType),
 				Location:       eventSpec.Location,
@@ -74,7 +74,7 @@ func (m *MockHandlingApplication) PopulateTestHandlingEvents(ctx context.Context
 
 			// Since we can't directly get the created event from the service,
 			// we'll create one for our return list to maintain consistency
-			event, err := domain.NewHandlingEvent(
+			event, err := handlingdomain.NewHandlingEvent(
 				scenario.TrackingId,
 				eventSpec.EventType,
 				eventSpec.Location,
@@ -132,7 +132,7 @@ func (m *MockHandlingApplication) generateEventSequence(locations []string) []Te
 	// Always start with RECEIVE
 	originLocation := locations[m.random.Intn(len(locations))]
 	events = append(events, TestHandlingEventSpec{
-		EventType:    domain.HandlingEventTypeReceive,
+		EventType:    handlingdomain.HandlingEventTypeReceive,
 		Location:     originLocation,
 		VoyageNumber: "", // No voyage for RECEIVE
 	})
@@ -146,7 +146,7 @@ func (m *MockHandlingApplication) generateEventSequence(locations []string) []Te
 		voyageNumber := fmt.Sprintf("V%d", 1000+m.random.Intn(9000))
 
 		events = append(events, TestHandlingEventSpec{
-			EventType:    domain.HandlingEventTypeLoad,
+			EventType:    handlingdomain.HandlingEventTypeLoad,
 			Location:     loadLocation,
 			VoyageNumber: voyageNumber,
 		})
@@ -158,7 +158,7 @@ func (m *MockHandlingApplication) generateEventSequence(locations []string) []Te
 		}
 
 		events = append(events, TestHandlingEventSpec{
-			EventType:    domain.HandlingEventTypeUnload,
+			EventType:    handlingdomain.HandlingEventTypeUnload,
 			Location:     unloadLocation,
 			VoyageNumber: voyageNumber,
 		})
@@ -168,7 +168,7 @@ func (m *MockHandlingApplication) generateEventSequence(locations []string) []Te
 	if m.random.Float32() < 0.7 { // 70% chance of completed delivery
 		finalLocation := events[len(events)-1].Location // Use last unload location
 		events = append(events, TestHandlingEventSpec{
-			EventType:    domain.HandlingEventTypeClaim,
+			EventType:    handlingdomain.HandlingEventTypeClaim,
 			Location:     finalLocation,
 			VoyageNumber: "", // No voyage for CLAIM
 		})
@@ -199,10 +199,10 @@ type TestHandlingScenario struct {
 
 // TestHandlingEventSpec defines the specification for creating a test handling event
 type TestHandlingEventSpec struct {
-	EventType    domain.HandlingEventType
+	EventType    handlingdomain.HandlingEventType
 	Location     string
 	VoyageNumber string // Optional, empty for RECEIVE/CLAIM
 }
 
 // Ensure MockHandlingApplication implements primary ports
-var _ primary.HandlingReportService = (*MockHandlingApplication)(nil)
+var _ handlingprimary.HandlingReportService = (*MockHandlingApplication)(nil)

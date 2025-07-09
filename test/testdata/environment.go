@@ -11,7 +11,7 @@ import (
 	"go_hex/internal/adapters/driven/in_memory_location_repo"
 	"go_hex/internal/adapters/driven/in_memory_voyage_repo"
 	"go_hex/internal/booking/bookingapplication"
-	handlingApp "go_hex/internal/handling/application"
+	"go_hex/internal/handling/handlingapplication"
 	routingApp "go_hex/internal/routing/application"
 )
 
@@ -26,7 +26,7 @@ type TestEnvironment struct {
 	// Application Services
 	BookingService        *bookingapplication.BookingApplicationService
 	RoutingService        *routingApp.RoutingApplicationService
-	HandlingReportService *handlingApp.HandlingReportService
+	HandlingReportService *handlingapplication.HandlingReportService
 
 	// Test Data
 	TestData TestDataSet

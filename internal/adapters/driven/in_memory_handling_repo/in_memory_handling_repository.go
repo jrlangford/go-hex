@@ -4,25 +4,25 @@ import (
 	"fmt"
 	"sync"
 
-	"go_hex/internal/handling/domain"
-	"go_hex/internal/handling/ports/secondary"
+	"go_hex/internal/handling/handlingdomain"
+	"go_hex/internal/handling/ports/handlingsecondary"
 )
 
 // InMemoryHandlingEventRepository provides an in-memory implementation of the HandlingEventRepository
 type InMemoryHandlingEventRepository struct {
-	events map[string]domain.HandlingEvent
+	events map[string]handlingdomain.HandlingEvent
 	mutex  sync.RWMutex
 }
 
 // NewInMemoryHandlingEventRepository creates a new in-memory handling event repository
-func NewInMemoryHandlingEventRepository() secondary.HandlingEventRepository {
+func NewInMemoryHandlingEventRepository() handlingsecondary.HandlingEventRepository {
 	return &InMemoryHandlingEventRepository{
-		events: make(map[string]domain.HandlingEvent),
+		events: make(map[string]handlingdomain.HandlingEvent),
 	}
 }
 
 // Store saves a handling event to the repository
-func (r *InMemoryHandlingEventRepository) Store(event domain.HandlingEvent) error {
+func (r *InMemoryHandlingEventRepository) Store(event handlingdomain.HandlingEvent) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
@@ -32,23 +32,23 @@ func (r *InMemoryHandlingEventRepository) Store(event domain.HandlingEvent) erro
 }
 
 // FindById retrieves a handling event by its ID
-func (r *InMemoryHandlingEventRepository) FindById(eventId domain.HandlingEventId) (domain.HandlingEvent, error) {
+func (r *InMemoryHandlingEventRepository) FindById(eventId handlingdomain.HandlingEventId) (handlingdomain.HandlingEvent, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
 	event, exists := r.events[eventId.String()]
 	if !exists {
-		return domain.HandlingEvent{}, fmt.Errorf("handling event with ID %s not found", eventId.String())
+		return handlingdomain.HandlingEvent{}, fmt.Errorf("handling event with ID %s not found", eventId.String())
 	}
 	return event, nil
 }
 
 // FindByTrackingId retrieves all handling events for a specific cargo
-func (r *InMemoryHandlingEventRepository) FindByTrackingId(trackingId string) ([]domain.HandlingEvent, error) {
+func (r *InMemoryHandlingEventRepository) FindByTrackingId(trackingId string) ([]handlingdomain.HandlingEvent, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
-	var events []domain.HandlingEvent
+	var events []handlingdomain.HandlingEvent
 	for _, event := range r.events {
 		if event.GetTrackingId() == trackingId {
 			events = append(events, event)
@@ -58,11 +58,11 @@ func (r *InMemoryHandlingEventRepository) FindByTrackingId(trackingId string) ([
 }
 
 // FindAll retrieves all handling events in the repository
-func (r *InMemoryHandlingEventRepository) FindAll() ([]domain.HandlingEvent, error) {
+func (r *InMemoryHandlingEventRepository) FindAll() ([]handlingdomain.HandlingEvent, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
-	events := make([]domain.HandlingEvent, 0, len(r.events))
+	events := make([]handlingdomain.HandlingEvent, 0, len(r.events))
 	for _, event := range r.events {
 		events = append(events, event)
 	}

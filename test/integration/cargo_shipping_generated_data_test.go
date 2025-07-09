@@ -11,8 +11,8 @@ import (
 	"go_hex/internal/adapters/integration"
 
 	"go_hex/internal/booking/bookingapplication"
-	handlingApp "go_hex/internal/handling/application"
-	handlingDomain "go_hex/internal/handling/domain"
+	"go_hex/internal/handling/handlingapplication"
+	handlingDomain "go_hex/internal/handling/handlingdomain"
 
 	"go_hex/test/testdata"
 )
@@ -56,7 +56,7 @@ func TestCargoShippingSystemIntegrationWithGeneratedData(t *testing.T) {
 	)
 
 	// Create Handling context application services
-	handlingReportService := handlingApp.NewHandlingReportService(
+	handlingReportService := handlingapplication.NewHandlingReportService(
 		testEnv.HandlingEventRepo,
 		eventBus, // Event publisher for handling events
 		logger,
@@ -119,7 +119,7 @@ func TestSpecificCargoScenario(t *testing.T) {
 	)
 
 	// Create Handling context application services
-	handlingReportService := handlingApp.NewHandlingReportService(
+	handlingReportService := handlingapplication.NewHandlingReportService(
 		testEnv.HandlingEventRepo,
 		eventBus,
 		logger,
@@ -183,7 +183,7 @@ func TestStressWithMultipleDataSets(t *testing.T) {
 				logger,
 			)
 
-			handlingReportService := handlingApp.NewHandlingReportService(
+			handlingReportService := handlingapplication.NewHandlingReportService(
 				testEnv.HandlingEventRepo,
 				eventBus,
 				logger,

@@ -13,14 +13,14 @@ import (
 
 	"go_hex/internal/booking/bookingapplication"
 	"go_hex/internal/booking/ports/bookingprimary"
-	handlingApp "go_hex/internal/handling/application"
-	handlingDomain "go_hex/internal/handling/domain"
-	handlingPorts "go_hex/internal/handling/ports/primary"
+	"go_hex/internal/handling/handlingapplication"
+	"go_hex/internal/handling/handlingdomain"
+	"go_hex/internal/handling/ports/handlingprimary"
 	routingApp "go_hex/internal/routing/application"
 	routingPorts "go_hex/internal/routing/ports/primary"
 
 	mockBookingApp "go_hex/internal/booking/bookingmock"
-	mockHandlingApp "go_hex/internal/handling/mock"
+	mockHandlingApp "go_hex/internal/handling/handlingmock"
 	mockRoutingApp "go_hex/internal/routing/mock"
 
 	"go_hex/internal/support/auth"
@@ -61,7 +61,7 @@ func wireAppDependencies(cfg *config.Config, logger *slog.Logger) *httpadapter.H
 	handlingEventRepo := in_memory_handling_repo.NewInMemoryHandlingEventRepository()
 
 	var bookingService bookingprimary.BookingService
-	var handlingReportService handlingPorts.HandlingReportService
+	var handlingReportService handlingprimary.HandlingReportService
 	var routingService routingPorts.RouteFinder
 
 	if cfg.IsMockMode() {
@@ -153,7 +153,7 @@ func wireAppDependencies(cfg *config.Config, logger *slog.Logger) *httpadapter.H
 		)
 
 		// Create Handling context application services
-		handlingReportService = handlingApp.NewHandlingReportService(
+		handlingReportService = handlingapplication.NewHandlingReportService(
 			handlingEventRepo,
 			eventBus, // Event publisher for handling events
 			logger,
@@ -161,14 +161,14 @@ func wireAppDependencies(cfg *config.Config, logger *slog.Logger) *httpadapter.H
 
 	}
 
-	handlingQueryService := handlingApp.NewHandlingEventQueryService(handlingEventRepo, logger)
+	handlingQueryService := handlingapplication.NewHandlingEventQueryService(handlingEventRepo, logger)
 
 	// Set up event-driven integration: Handling->Booking (asynchronous, ACL)
 	handlingToBookingHandler := integration.NewHandlingToBookingEventHandler(bookingService, logger)
 
 	// Subscribe to handling events
 	eventBus.Subscribe(
-		handlingDomain.HandlingEventRegisteredEvent{}.EventName(),
+		handlingdomain.HandlingEventRegisteredEvent{}.EventName(),
 		handlingToBookingHandler.HandleCargoWasHandled,
 	)
 
@@ -185,7 +185,7 @@ func wireAppDependencies(cfg *config.Config, logger *slog.Logger) *httpadapter.H
 	)
 
 	logger.Info("Application dependencies wired successfully",
-		"cargo_subscribers", eventBus.GetSubscriberCount(handlingDomain.HandlingEventRegisteredEvent{}.EventName()),
+		"cargo_subscribers", eventBus.GetSubscriberCount(handlingdomain.HandlingEventRegisteredEvent{}.EventName()),
 		"mode", cfg.Mode,
 	)
 
