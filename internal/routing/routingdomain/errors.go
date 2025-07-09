@@ -1,4 +1,4 @@
-package domain
+package routingdomain
 
 import (
 	"go_hex/internal/support/errors"

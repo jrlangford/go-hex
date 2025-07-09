@@ -19,7 +19,7 @@ import (
 	"go_hex/internal/booking/bookingdomain"
 	"go_hex/internal/handling/handlingapplication"
 	"go_hex/internal/handling/handlingdomain"
-	routingApp "go_hex/internal/routing/application"
+	"go_hex/internal/routing/routingapplication"
 )
 
 // createAuthenticatedContext creates a context with admin authentication for testing
@@ -49,7 +49,7 @@ func TestCargoShippingSystemIntegration(t *testing.T) {
 	handlingEventRepo := in_memory_handling_repo.NewInMemoryHandlingEventRepository()
 
 	// Create Routing context application service
-	routingService := routingApp.NewRoutingApplicationService(
+	routingService := routingapplication.NewRoutingApplicationService(
 		voyageRepo,
 		locationRepo,
 		logger,

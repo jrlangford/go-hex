@@ -12,7 +12,7 @@ import (
 
 	"go_hex/internal/booking/bookingapplication"
 	"go_hex/internal/handling/handlingapplication"
-	handlingDomain "go_hex/internal/handling/handlingdomain"
+	"go_hex/internal/handling/handlingdomain"
 
 	"go_hex/test/testdata"
 )
@@ -67,7 +67,7 @@ func TestCargoShippingSystemIntegrationWithGeneratedData(t *testing.T) {
 
 	// Subscribe to handling events
 	eventBus.Subscribe(
-		handlingDomain.HandlingEventRegisteredEvent{}.EventName(),
+		handlingdomain.HandlingEventRegisteredEvent{}.EventName(),
 		handlingToBookingHandler.HandleCargoWasHandled,
 	)
 
@@ -128,7 +128,7 @@ func TestSpecificCargoScenario(t *testing.T) {
 	// Set up event integration
 	handlingToBookingHandler := integration.NewHandlingToBookingEventHandler(bookingService, logger)
 	eventBus.Subscribe(
-		handlingDomain.HandlingEventRegisteredEvent{}.EventName(),
+		handlingdomain.HandlingEventRegisteredEvent{}.EventName(),
 		handlingToBookingHandler.HandleCargoWasHandled,
 	)
 
@@ -191,7 +191,7 @@ func TestStressWithMultipleDataSets(t *testing.T) {
 
 			handlingToBookingHandler := integration.NewHandlingToBookingEventHandler(bookingService, logger)
 			eventBus.Subscribe(
-				handlingDomain.HandlingEventRegisteredEvent{}.EventName(),
+				handlingdomain.HandlingEventRegisteredEvent{}.EventName(),
 				handlingToBookingHandler.HandleCargoWasHandled,
 			)
 

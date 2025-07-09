@@ -182,8 +182,8 @@ func NewInMemoryLocationRepository() secondary.LocationRepository {
 }
 
 // Data created through application
-locationSpecs := routingApp.GenerateStandardLocations(8)
-locations, err := routingApp.PopulateTestLocations(ctx, locationSpecs)
+locationSpecs := routingapplication.GenerateStandardLocations(8)
+locations, err := routingapplication.PopulateTestLocations(ctx, locationSpecs)
 ```
 
 ## 🚀 Future Extensions

@@ -8,8 +8,8 @@ import (
 	bookingPorts "go_hex/internal/booking/ports/bookingprimary"
 	"go_hex/internal/handling/handlingdomain"
 	"go_hex/internal/handling/ports/handlingprimary"
-	routingDomain "go_hex/internal/routing/domain"
-	routingPorts "go_hex/internal/routing/ports/primary"
+	"go_hex/internal/routing/ports/routingprimary"
+	"go_hex/internal/routing/routingdomain"
 	"go_hex/internal/support/validation"
 	"net/http"
 	"net/url"
@@ -22,7 +22,7 @@ import (
 type Handler struct {
 	authMiddleware        *middleware.AuthMiddleware
 	bookingService        bookingPorts.BookingService
-	routingService        routingPorts.RouteFinder
+	routingService        routingprimary.RouteFinder
 	handlingReportService handlingprimary.HandlingReportService
 	handlingQueryService  handlingprimary.HandlingEventQueryService
 }
@@ -31,7 +31,7 @@ type Handler struct {
 func NewHandler(
 	authMiddleware *middleware.AuthMiddleware,
 	bookingService bookingPorts.BookingService,
-	routingService routingPorts.RouteFinder,
+	routingService routingprimary.RouteFinder,
 	handlingReportService handlingprimary.HandlingReportService,
 	handlingQueryService handlingprimary.HandlingEventQueryService,
 ) *Handler {
@@ -573,7 +573,7 @@ func (h *Handler) AuthMeHandler(w http.ResponseWriter, r *http.Request) {
 
 func VoyageToResponse(voyage interface{}) VoyageResponse {
 	// Type assert to proper domain type
-	if v, ok := voyage.(routingDomain.Voyage); ok {
+	if v, ok := voyage.(routingdomain.Voyage); ok {
 		schedule := v.GetSchedule()
 		legs := make([]LegDTO, len(schedule.Movements))
 
@@ -602,7 +602,7 @@ func VoyageToResponse(voyage interface{}) VoyageResponse {
 
 func LocationToResponse(location interface{}) LocationResponse {
 	// Type assert to proper domain type
-	if l, ok := location.(routingDomain.Location); ok {
+	if l, ok := location.(routingdomain.Location); ok {
 		return LocationResponse{
 			Code: l.GetUnLocode().String(),
 			Name: l.GetName(),

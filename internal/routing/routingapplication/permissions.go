@@ -1,4 +1,4 @@
-package application
+package routingapplication
 
 import (
 	"go_hex/internal/support/auth"

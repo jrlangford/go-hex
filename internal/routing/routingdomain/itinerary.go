@@ -1,4 +1,4 @@
-package domain
+package routingdomain
 
 // RouteSpecification represents routing requirements from external contexts
 // This is separate from the booking domain's RouteSpecification to maintain bounded context independence

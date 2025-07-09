@@ -5,7 +5,7 @@ import (
 
 	"go_hex/internal/booking/bookingdomain"
 	"go_hex/internal/handling/handlingdomain"
-	routingDomain "go_hex/internal/routing/domain"
+	"go_hex/internal/routing/routingdomain"
 )
 
 // BookCargoRequest represents the request payload for booking cargo
@@ -193,7 +193,7 @@ func HandlingEventToDTO(event handlingdomain.HandlingEvent) HandlingEventDTO {
 	}
 }
 
-func VoyageToResponseFromDomain(voyage routingDomain.Voyage) VoyageResponse {
+func VoyageToResponseFromDomain(voyage routingdomain.Voyage) VoyageResponse {
 	schedule := voyage.GetSchedule()
 	legs := make([]LegDTO, len(schedule.Movements))
 
@@ -213,7 +213,7 @@ func VoyageToResponseFromDomain(voyage routingDomain.Voyage) VoyageResponse {
 	}
 }
 
-func LocationToResponseFromDomain(location routingDomain.Location) LocationResponse {
+func LocationToResponseFromDomain(location routingdomain.Location) LocationResponse {
 	return LocationResponse{
 		Code: location.GetUnLocode().String(),
 		Name: location.GetName(),

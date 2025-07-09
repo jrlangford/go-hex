@@ -1,32 +1,32 @@
-package secondary
+package routingsecondary
 
 import (
-	"go_hex/internal/routing/domain"
+	"go_hex/internal/routing/routingdomain"
 )
 
 // VoyageRepository defines the secondary port for voyage persistence
 type VoyageRepository interface {
 	// Store persists a voyage
-	Store(voyage domain.Voyage) error
+	Store(voyage routingdomain.Voyage) error
 
 	// FindByVoyageNumber retrieves a voyage by its number
-	FindByVoyageNumber(voyageNumber domain.VoyageNumber) (domain.Voyage, error)
+	FindByVoyageNumber(voyageNumber routingdomain.VoyageNumber) (routingdomain.Voyage, error)
 
 	// FindAll retrieves all voyages
-	FindAll() ([]domain.Voyage, error)
+	FindAll() ([]routingdomain.Voyage, error)
 
 	// FindVoyagesConnecting finds voyages that connect two locations
-	FindVoyagesConnecting(origin, destination domain.UnLocode) ([]domain.Voyage, error)
+	FindVoyagesConnecting(origin, destination routingdomain.UnLocode) ([]routingdomain.Voyage, error)
 }
 
 // LocationRepository defines the secondary port for location persistence
 type LocationRepository interface {
 	// Store persists a location
-	Store(location domain.Location) error
+	Store(location routingdomain.Location) error
 
 	// FindByUnLocode retrieves a location by its UN/LOCODE
-	FindByUnLocode(unLocode domain.UnLocode) (domain.Location, error)
+	FindByUnLocode(unLocode routingdomain.UnLocode) (routingdomain.Location, error)
 
 	// FindAll retrieves all locations
-	FindAll() ([]domain.Location, error)
+	FindAll() ([]routingdomain.Location, error)
 }

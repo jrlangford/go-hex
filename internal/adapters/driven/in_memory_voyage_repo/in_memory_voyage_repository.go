@@ -4,25 +4,25 @@ import (
 	"fmt"
 	"sync"
 
-	"go_hex/internal/routing/domain"
-	"go_hex/internal/routing/ports/secondary"
+	"go_hex/internal/routing/ports/routingsecondary"
+	"go_hex/internal/routing/routingdomain"
 )
 
 // InMemoryVoyageRepository provides an in-memory implementation of the VoyageRepository
 type InMemoryVoyageRepository struct {
-	voyages map[string]domain.Voyage
+	voyages map[string]routingdomain.Voyage
 	mutex   sync.RWMutex
 }
 
 // NewInMemoryVoyageRepository creates a new in-memory voyage repository
-func NewInMemoryVoyageRepository() secondary.VoyageRepository {
+func NewInMemoryVoyageRepository() routingsecondary.VoyageRepository {
 	return &InMemoryVoyageRepository{
-		voyages: make(map[string]domain.Voyage),
+		voyages: make(map[string]routingdomain.Voyage),
 	}
 }
 
 // Store saves a voyage to the repository
-func (r *InMemoryVoyageRepository) Store(voyage domain.Voyage) error {
+func (r *InMemoryVoyageRepository) Store(voyage routingdomain.Voyage) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
@@ -32,23 +32,23 @@ func (r *InMemoryVoyageRepository) Store(voyage domain.Voyage) error {
 }
 
 // FindByVoyageNumber retrieves a voyage by its voyage number
-func (r *InMemoryVoyageRepository) FindByVoyageNumber(voyageNumber domain.VoyageNumber) (domain.Voyage, error) {
+func (r *InMemoryVoyageRepository) FindByVoyageNumber(voyageNumber routingdomain.VoyageNumber) (routingdomain.Voyage, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
 	voyage, exists := r.voyages[voyageNumber.String()]
 	if !exists {
-		return domain.Voyage{}, fmt.Errorf("voyage with number %s not found", voyageNumber.String())
+		return routingdomain.Voyage{}, fmt.Errorf("voyage with number %s not found", voyageNumber.String())
 	}
 	return voyage, nil
 }
 
 // FindAll retrieves all voyages in the repository
-func (r *InMemoryVoyageRepository) FindAll() ([]domain.Voyage, error) {
+func (r *InMemoryVoyageRepository) FindAll() ([]routingdomain.Voyage, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
-	voyages := make([]domain.Voyage, 0, len(r.voyages))
+	voyages := make([]routingdomain.Voyage, 0, len(r.voyages))
 	for _, voyage := range r.voyages {
 		voyages = append(voyages, voyage)
 	}
@@ -56,11 +56,11 @@ func (r *InMemoryVoyageRepository) FindAll() ([]domain.Voyage, error) {
 }
 
 // FindVoyagesConnecting finds voyages that connect two locations
-func (r *InMemoryVoyageRepository) FindVoyagesConnecting(origin, destination domain.UnLocode) ([]domain.Voyage, error) {
+func (r *InMemoryVoyageRepository) FindVoyagesConnecting(origin, destination routingdomain.UnLocode) ([]routingdomain.Voyage, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
-	var connectingVoyages []domain.Voyage
+	var connectingVoyages []routingdomain.Voyage
 	for _, voyage := range r.voyages {
 		schedule := voyage.GetSchedule()
 		// Check if voyage starts at origin and ends at destination

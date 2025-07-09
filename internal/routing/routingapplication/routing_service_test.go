@@ -1,4 +1,4 @@
-package application
+package routingapplication
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"go_hex/internal/routing/domain"
+	"go_hex/internal/routing/routingdomain"
 	"go_hex/internal/support/auth"
 	"log/slog"
 
@@ -20,48 +20,48 @@ type MockVoyageRepository struct {
 	mock.Mock
 }
 
-func (m *MockVoyageRepository) Store(voyage domain.Voyage) error {
+func (m *MockVoyageRepository) Store(voyage routingdomain.Voyage) error {
 	args := m.Called(voyage)
 	return args.Error(0)
 }
 
-func (m *MockVoyageRepository) FindAll() ([]domain.Voyage, error) {
+func (m *MockVoyageRepository) FindAll() ([]routingdomain.Voyage, error) {
 	args := m.Called()
-	return args.Get(0).([]domain.Voyage), args.Error(1)
+	return args.Get(0).([]routingdomain.Voyage), args.Error(1)
 }
 
-func (m *MockVoyageRepository) FindByNumber(number domain.VoyageNumber) (domain.Voyage, error) {
+func (m *MockVoyageRepository) FindByNumber(number routingdomain.VoyageNumber) (routingdomain.Voyage, error) {
 	args := m.Called(number)
-	return args.Get(0).(domain.Voyage), args.Error(1)
+	return args.Get(0).(routingdomain.Voyage), args.Error(1)
 }
 
-func (m *MockVoyageRepository) FindByVoyageNumber(voyageNumber domain.VoyageNumber) (domain.Voyage, error) {
+func (m *MockVoyageRepository) FindByVoyageNumber(voyageNumber routingdomain.VoyageNumber) (routingdomain.Voyage, error) {
 	args := m.Called(voyageNumber)
-	return args.Get(0).(domain.Voyage), args.Error(1)
+	return args.Get(0).(routingdomain.Voyage), args.Error(1)
 }
 
-func (m *MockVoyageRepository) FindVoyagesConnecting(origin, destination domain.UnLocode) ([]domain.Voyage, error) {
+func (m *MockVoyageRepository) FindVoyagesConnecting(origin, destination routingdomain.UnLocode) ([]routingdomain.Voyage, error) {
 	args := m.Called(origin, destination)
-	return args.Get(0).([]domain.Voyage), args.Error(1)
+	return args.Get(0).([]routingdomain.Voyage), args.Error(1)
 }
 
 type MockLocationRepository struct {
 	mock.Mock
 }
 
-func (m *MockLocationRepository) Store(location domain.Location) error {
+func (m *MockLocationRepository) Store(location routingdomain.Location) error {
 	args := m.Called(location)
 	return args.Error(0)
 }
 
-func (m *MockLocationRepository) FindAll() ([]domain.Location, error) {
+func (m *MockLocationRepository) FindAll() ([]routingdomain.Location, error) {
 	args := m.Called()
-	return args.Get(0).([]domain.Location), args.Error(1)
+	return args.Get(0).([]routingdomain.Location), args.Error(1)
 }
 
-func (m *MockLocationRepository) FindByUnLocode(code domain.UnLocode) (domain.Location, error) {
+func (m *MockLocationRepository) FindByUnLocode(code routingdomain.UnLocode) (routingdomain.Location, error) {
 	args := m.Called(code)
-	return args.Get(0).(domain.Location), args.Error(1)
+	return args.Get(0).(routingdomain.Location), args.Error(1)
 }
 
 func TestRoutingApplicationService_FindOptimalItineraries(t *testing.T) {
@@ -88,7 +88,7 @@ func TestRoutingApplicationService_FindOptimalItineraries(t *testing.T) {
 		ctx := createContextWithClaims(t, []string{})
 
 		// Create route specification
-		routeSpec := domain.RouteSpecification{
+		routeSpec := routingdomain.RouteSpecification{
 			Origin:          "USNYC",
 			Destination:     "DEHAM",
 			ArrivalDeadline: time.Now().Add(48 * time.Hour).Format(time.RFC3339),
@@ -109,7 +109,7 @@ func TestRoutingApplicationService_FindOptimalItineraries(t *testing.T) {
 		// Create context without proper claims
 		ctx := context.Background()
 
-		routeSpec := domain.RouteSpecification{
+		routeSpec := routingdomain.RouteSpecification{
 			Origin:          "USNYC",
 			Destination:     "DEHAM",
 			ArrivalDeadline: time.Now().Add(48 * time.Hour).Format(time.RFC3339),
@@ -128,7 +128,7 @@ func TestRoutingApplicationService_FindOptimalItineraries(t *testing.T) {
 		// Create context with valid claims
 		ctx := createContextWithClaims(t, []string{})
 
-		routeSpec := domain.RouteSpecification{
+		routeSpec := routingdomain.RouteSpecification{
 			Origin:          "USNYC",
 			Destination:     "DEHAM",
 			ArrivalDeadline: "invalid-date-format",
@@ -148,7 +148,7 @@ func TestRoutingApplicationService_FindOptimalItineraries(t *testing.T) {
 		// Create context with valid claims
 		ctx := createContextWithClaims(t, []string{})
 
-		routeSpec := domain.RouteSpecification{
+		routeSpec := routingdomain.RouteSpecification{
 			Origin:          "XX", // Invalid - too short
 			Destination:     "DEHAM",
 			ArrivalDeadline: time.Now().Add(48 * time.Hour).Format(time.RFC3339),
@@ -168,7 +168,7 @@ func TestRoutingApplicationService_FindOptimalItineraries(t *testing.T) {
 		// Create context with valid claims
 		ctx := createContextWithClaims(t, []string{})
 
-		routeSpec := domain.RouteSpecification{
+		routeSpec := routingdomain.RouteSpecification{
 			Origin:          "USNYC",
 			Destination:     "XX", // Invalid - too short
 			ArrivalDeadline: time.Now().Add(48 * time.Hour).Format(time.RFC3339),
@@ -186,12 +186,12 @@ func TestRoutingApplicationService_FindOptimalItineraries(t *testing.T) {
 		service, voyageRepo, _ := setup()
 
 		// Setup mocks
-		voyageRepo.On("FindAll").Return([]domain.Voyage{}, errors.New("repository error"))
+		voyageRepo.On("FindAll").Return([]routingdomain.Voyage{}, errors.New("repository error"))
 
 		// Create context with valid claims
 		ctx := createContextWithClaims(t, []string{})
 
-		routeSpec := domain.RouteSpecification{
+		routeSpec := routingdomain.RouteSpecification{
 			Origin:          "USNYC",
 			Destination:     "DEHAM",
 			ArrivalDeadline: time.Now().Add(48 * time.Hour).Format(time.RFC3339),
@@ -210,12 +210,12 @@ func TestRoutingApplicationService_FindOptimalItineraries(t *testing.T) {
 		service, voyageRepo, _ := setup()
 
 		// Setup mocks with empty voyage list
-		voyageRepo.On("FindAll").Return([]domain.Voyage{}, nil)
+		voyageRepo.On("FindAll").Return([]routingdomain.Voyage{}, nil)
 
 		// Create context with valid claims
 		ctx := createContextWithClaims(t, []string{})
 
-		routeSpec := domain.RouteSpecification{
+		routeSpec := routingdomain.RouteSpecification{
 			Origin:          "USNYC",
 			Destination:     "DEHAM",
 			ArrivalDeadline: time.Now().Add(48 * time.Hour).Format(time.RFC3339),
@@ -247,38 +247,38 @@ func createContextWithClaims(t *testing.T, permissions []string) context.Context
 	return context.WithValue(context.Background(), auth.ClaimsContextKey, claims)
 }
 
-func createTestVoyages(t *testing.T) []domain.Voyage {
+func createTestVoyages(t *testing.T) []routingdomain.Voyage {
 	// Create test UN/LOCODEs
-	usnyc, err := domain.NewUnLocode("USNYC")
+	usnyc, err := routingdomain.NewUnLocode("USNYC")
 	require.NoError(t, err)
-	deham, err := domain.NewUnLocode("DEHAM")
+	deham, err := routingdomain.NewUnLocode("DEHAM")
 	require.NoError(t, err)
-	segot, err := domain.NewUnLocode("SEGOT")
+	segot, err := routingdomain.NewUnLocode("SEGOT")
 	require.NoError(t, err)
 
 	baseTime := time.Now().Add(time.Hour)
 
 	// Create first voyage: USNYC -> DEHAM
-	movement1, err := domain.NewCarrierMovement(
+	movement1, err := routingdomain.NewCarrierMovement(
 		usnyc, deham,
 		baseTime,
 		baseTime.Add(24*time.Hour),
 	)
 	require.NoError(t, err)
 
-	voyage1, err := domain.NewVoyage([]domain.CarrierMovement{movement1})
+	voyage1, err := routingdomain.NewVoyage([]routingdomain.CarrierMovement{movement1})
 	require.NoError(t, err)
 
 	// Create second voyage: DEHAM -> SEGOT
-	movement2, err := domain.NewCarrierMovement(
+	movement2, err := routingdomain.NewCarrierMovement(
 		deham, segot,
 		baseTime.Add(26*time.Hour), // Allow time for transshipment
 		baseTime.Add(48*time.Hour),
 	)
 	require.NoError(t, err)
 
-	voyage2, err := domain.NewVoyage([]domain.CarrierMovement{movement2})
+	voyage2, err := routingdomain.NewVoyage([]routingdomain.CarrierMovement{movement2})
 	require.NoError(t, err)
 
-	return []domain.Voyage{voyage1, voyage2}
+	return []routingdomain.Voyage{voyage1, voyage2}
 }

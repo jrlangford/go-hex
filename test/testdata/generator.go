@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"go_hex/internal/booking/bookingdomain"
-	handlingDomain "go_hex/internal/handling/handlingdomain"
-	routingDomain "go_hex/internal/routing/domain"
+	"go_hex/internal/handling/handlingdomain"
+	"go_hex/internal/routing/routingdomain"
 )
 
 // TestDataGenerator provides methods to generate test data for all bounded contexts
@@ -56,12 +56,12 @@ var standardLocations = []struct {
 }
 
 // GenerateLocations creates a collection of test locations
-func (g *TestDataGenerator) GenerateLocations(count int) []routingDomain.Location {
+func (g *TestDataGenerator) GenerateLocations(count int) []routingdomain.Location {
 	if count > len(standardLocations) {
 		count = len(standardLocations)
 	}
 
-	locations := make([]routingDomain.Location, 0, count)
+	locations := make([]routingdomain.Location, 0, count)
 
 	// Shuffle the standard locations for variety
 	shuffled := make([]int, len(standardLocations))
@@ -76,7 +76,7 @@ func (g *TestDataGenerator) GenerateLocations(count int) []routingDomain.Locatio
 		idx := shuffled[i]
 		loc := standardLocations[idx]
 
-		location, err := routingDomain.NewLocation(loc.code, loc.name, loc.country)
+		location, err := routingdomain.NewLocation(loc.code, loc.name, loc.country)
 		if err != nil {
 			g.logger.Error("Failed to create location", "error", err, "code", loc.code)
 			continue
@@ -89,13 +89,13 @@ func (g *TestDataGenerator) GenerateLocations(count int) []routingDomain.Locatio
 }
 
 // GenerateVoyages creates a collection of test voyages with realistic schedules
-func (g *TestDataGenerator) GenerateVoyages(locations []routingDomain.Location, count int) []routingDomain.Voyage {
+func (g *TestDataGenerator) GenerateVoyages(locations []routingdomain.Location, count int) []routingdomain.Voyage {
 	if len(locations) < 2 {
 		g.logger.Error("Need at least 2 locations to generate voyages")
-		return []routingDomain.Voyage{}
+		return []routingdomain.Voyage{}
 	}
 
-	voyages := make([]routingDomain.Voyage, 0, count)
+	voyages := make([]routingdomain.Voyage, 0, count)
 	baseTime := time.Now().Add(24 * time.Hour) // Start voyages tomorrow
 
 	for i := 0; i < count; i++ {
@@ -109,19 +109,19 @@ func (g *TestDataGenerator) GenerateVoyages(locations []routingDomain.Location, 
 }
 
 // generateSingleVoyage creates a single voyage with multiple carrier movements
-func (g *TestDataGenerator) generateSingleVoyage(locations []routingDomain.Location, startTime time.Time) *routingDomain.Voyage {
+func (g *TestDataGenerator) generateSingleVoyage(locations []routingdomain.Location, startTime time.Time) *routingdomain.Voyage {
 	// Generate 2-4 movements per voyage
 	movementCount := 2 + g.random.Intn(3)
-	movements := make([]routingDomain.CarrierMovement, 0, movementCount)
+	movements := make([]routingdomain.CarrierMovement, 0, movementCount)
 
 	// Create a path through different locations
 	usedLocations := make(map[string]bool)
 	currentTime := startTime
 
-	var previousLocation *routingDomain.Location
+	var previousLocation *routingdomain.Location
 
 	for i := 0; i < movementCount; i++ {
-		var fromLocation, toLocation routingDomain.Location
+		var fromLocation, toLocation routingdomain.Location
 
 		if previousLocation == nil {
 			// First movement - pick random start location
@@ -159,7 +159,7 @@ func (g *TestDataGenerator) generateSingleVoyage(locations []routingDomain.Locat
 		departureTime := currentTime
 		arrivalTime := departureTime.Add(time.Duration(travelHours) * time.Hour)
 
-		movement, err := routingDomain.NewCarrierMovement(
+		movement, err := routingdomain.NewCarrierMovement(
 			fromLocation.ID(),
 			toLocation.ID(),
 			departureTime,
@@ -179,7 +179,7 @@ func (g *TestDataGenerator) generateSingleVoyage(locations []routingDomain.Locat
 		previousLocation = &toLocation
 	}
 
-	voyage, err := routingDomain.NewVoyage(movements)
+	voyage, err := routingdomain.NewVoyage(movements)
 	if err != nil {
 		g.logger.Error("Failed to create voyage", "error", err)
 		return nil
@@ -199,7 +199,7 @@ type CargoTestData struct {
 
 // HandlingEventData represents a handling event for testing
 type HandlingEventData struct {
-	EventType      handlingDomain.HandlingEventType
+	EventType      handlingdomain.HandlingEventType
 	Location       string
 	VoyageNumber   string
 	CompletionTime time.Time
@@ -207,7 +207,7 @@ type HandlingEventData struct {
 }
 
 // GenerateCargoScenarios creates realistic cargo shipping scenarios for testing
-func (g *TestDataGenerator) GenerateCargoScenarios(locations []routingDomain.Location, voyages []routingDomain.Voyage, count int) []CargoTestData {
+func (g *TestDataGenerator) GenerateCargoScenarios(locations []routingdomain.Location, voyages []routingdomain.Voyage, count int) []CargoTestData {
 	if len(locations) < 2 {
 		g.logger.Error("Need at least 2 locations to generate cargo scenarios")
 		return []CargoTestData{}
@@ -226,7 +226,7 @@ func (g *TestDataGenerator) GenerateCargoScenarios(locations []routingDomain.Loc
 }
 
 // generateCargoScenario creates a single cargo scenario with associated handling events
-func (g *TestDataGenerator) generateCargoScenario(locations []routingDomain.Location, voyages []routingDomain.Voyage, scenarioIndex int) *CargoTestData {
+func (g *TestDataGenerator) generateCargoScenario(locations []routingdomain.Location, voyages []routingdomain.Voyage, scenarioIndex int) *CargoTestData {
 	// Pick random origin and destination
 	originIdx := g.random.Intn(len(locations))
 	var destIdx int
@@ -264,13 +264,13 @@ func (g *TestDataGenerator) generateCargoScenario(locations []routingDomain.Loca
 }
 
 // generateHandlingEvents creates a sequence of realistic handling events
-func (g *TestDataGenerator) generateHandlingEvents(origin, destination string, voyages []routingDomain.Voyage) []HandlingEventData {
+func (g *TestDataGenerator) generateHandlingEvents(origin, destination string, voyages []routingdomain.Voyage) []HandlingEventData {
 	events := []HandlingEventData{}
 	currentTime := time.Now().Add(-24 * time.Hour) // Start events 24 hours ago (well in the past)
 
 	// Always start with RECEIVE at origin
 	events = append(events, HandlingEventData{
-		EventType:      handlingDomain.HandlingEventTypeReceive,
+		EventType:      handlingdomain.HandlingEventTypeReceive,
 		Location:       origin,
 		VoyageNumber:   "",
 		CompletionTime: currentTime,
@@ -283,7 +283,7 @@ func (g *TestDataGenerator) generateHandlingEvents(origin, destination string, v
 
 		currentTime = currentTime.Add(time.Duration(2+g.random.Intn(4)) * time.Hour)
 		events = append(events, HandlingEventData{
-			EventType:      handlingDomain.HandlingEventTypeLoad,
+			EventType:      handlingdomain.HandlingEventTypeLoad,
 			Location:       origin,
 			VoyageNumber:   selectedVoyage.GetVoyageNumber().String(),
 			CompletionTime: currentTime,
@@ -299,7 +299,7 @@ func (g *TestDataGenerator) generateHandlingEvents(origin, destination string, v
 
 			currentTime = currentTime.Add(time.Duration(4+g.random.Intn(8)) * time.Hour) // Use relative time instead of movement time
 			events = append(events, HandlingEventData{
-				EventType:      handlingDomain.HandlingEventTypeUnload,
+				EventType:      handlingdomain.HandlingEventTypeUnload,
 				Location:       unloadLocation,
 				VoyageNumber:   selectedVoyage.GetVoyageNumber().String(),
 				CompletionTime: currentTime,
@@ -310,7 +310,7 @@ func (g *TestDataGenerator) generateHandlingEvents(origin, destination string, v
 			if unloadLocation == destination {
 				currentTime = currentTime.Add(time.Duration(1+g.random.Intn(6)) * time.Hour)
 				events = append(events, HandlingEventData{
-					EventType:      handlingDomain.HandlingEventTypeClaim,
+					EventType:      handlingdomain.HandlingEventTypeClaim,
 					Location:       destination,
 					VoyageNumber:   "",
 					CompletionTime: currentTime,
@@ -325,8 +325,8 @@ func (g *TestDataGenerator) generateHandlingEvents(origin, destination string, v
 
 // TestDataSet represents a complete set of test data for integration tests
 type TestDataSet struct {
-	Locations      []routingDomain.Location
-	Voyages        []routingDomain.Voyage
+	Locations      []routingdomain.Location
+	Voyages        []routingdomain.Voyage
 	CargoScenarios []CargoTestData
 	Seed           int64
 	GeneratedAt    time.Time
@@ -385,15 +385,15 @@ func (dataset *TestDataSet) PopulateRepositories(ctx context.Context, repos Test
 // TestRepositories holds references to test repositories for data population
 type TestRepositories struct {
 	LocationRepo interface {
-		Store(routingDomain.Location) error
+		Store(routingdomain.Location) error
 	}
 	VoyageRepo interface {
-		Store(routingDomain.Voyage) error
+		Store(routingdomain.Voyage) error
 	}
 	CargoRepo interface {
 		Store(bookingdomain.Cargo) error
 	}
 	HandlingEventRepo interface {
-		Store(handlingDomain.HandlingEvent) error
+		Store(handlingdomain.HandlingEvent) error
 	}
 }

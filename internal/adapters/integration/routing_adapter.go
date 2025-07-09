@@ -6,18 +6,18 @@ import (
 
 	"go_hex/internal/booking/bookingdomain"
 	"go_hex/internal/booking/ports/bookingsecondary"
-	routingDomain "go_hex/internal/routing/domain"
-	routingPorts "go_hex/internal/routing/ports/primary"
+	"go_hex/internal/routing/ports/routingprimary"
+	"go_hex/internal/routing/routingdomain"
 )
 
 // RoutingServiceAdapter adapts the Routing context's application service
 // to the interface expected by the Booking context (Anti-Corruption Layer)
 type RoutingServiceAdapter struct {
-	routingService routingPorts.RouteFinder
+	routingService routingprimary.RouteFinder
 }
 
 // NewRoutingServiceAdapter creates a new adapter for the routing service
-func NewRoutingServiceAdapter(routingService routingPorts.RouteFinder) bookingsecondary.RoutingService {
+func NewRoutingServiceAdapter(routingService routingprimary.RouteFinder) bookingsecondary.RoutingService {
 	return &RoutingServiceAdapter{
 		routingService: routingService,
 	}
@@ -26,7 +26,7 @@ func NewRoutingServiceAdapter(routingService routingPorts.RouteFinder) bookingse
 // FindOptimalItineraries adapts the routing service's interface to the booking context's needs
 func (a *RoutingServiceAdapter) FindOptimalItineraries(ctx context.Context, routeSpec bookingdomain.RouteSpecification) ([]bookingdomain.Itinerary, error) {
 	// Convert Booking domain RouteSpecification to Routing domain format (Anti-Corruption Layer)
-	routingRouteSpec := routingDomain.RouteSpecification{
+	routingRouteSpec := routingdomain.RouteSpecification{
 		Origin:          routeSpec.Origin,
 		Destination:     routeSpec.Destination,
 		ArrivalDeadline: routeSpec.ArrivalDeadline.Format(time.RFC3339), // Convert to string for routing service

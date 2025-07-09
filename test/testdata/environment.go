@@ -12,7 +12,7 @@ import (
 	"go_hex/internal/adapters/driven/in_memory_voyage_repo"
 	"go_hex/internal/booking/bookingapplication"
 	"go_hex/internal/handling/handlingapplication"
-	routingApp "go_hex/internal/routing/application"
+	"go_hex/internal/routing/routingapplication"
 )
 
 // TestEnvironment holds all the services and repositories needed for testing
@@ -25,7 +25,7 @@ type TestEnvironment struct {
 
 	// Application Services
 	BookingService        *bookingapplication.BookingApplicationService
-	RoutingService        *routingApp.RoutingApplicationService
+	RoutingService        *routingapplication.RoutingApplicationService
 	HandlingReportService *handlingapplication.HandlingReportService
 
 	// Test Data
@@ -46,7 +46,7 @@ func NewTestEnvironment(seed int64, logger *slog.Logger) (*TestEnvironment, erro
 	handlingEventRepo := in_memory_handling_repo.NewInMemoryHandlingEventRepository().(*in_memory_handling_repo.InMemoryHandlingEventRepository)
 
 	// Create application services (this would normally be done in main.go)
-	routingService := routingApp.NewRoutingApplicationService(
+	routingService := routingapplication.NewRoutingApplicationService(
 		voyageRepo,
 		locationRepo,
 		logger,

@@ -1,10 +1,10 @@
-package application
+package routingapplication
 
 import (
 	"context"
-	"go_hex/internal/routing/domain"
-	"go_hex/internal/routing/ports/primary"
-	"go_hex/internal/routing/ports/secondary"
+	"go_hex/internal/routing/ports/routingprimary"
+	"go_hex/internal/routing/ports/routingsecondary"
+	"go_hex/internal/routing/routingdomain"
 	"go_hex/internal/support/auth"
 	"log/slog"
 	"time"
@@ -12,18 +12,18 @@ import (
 
 // RoutingApplicationService implements the primary port for routing operations
 type RoutingApplicationService struct {
-	voyageRepo   secondary.VoyageRepository
-	locationRepo secondary.LocationRepository
+	voyageRepo   routingsecondary.VoyageRepository
+	locationRepo routingsecondary.LocationRepository
 	logger       *slog.Logger
 }
 
 // Ensure RoutingApplicationService implements the primary port
-var _ primary.RouteFinder = (*RoutingApplicationService)(nil)
+var _ routingprimary.RouteFinder = (*RoutingApplicationService)(nil)
 
 // NewRoutingApplicationService creates a new RoutingApplicationService
 func NewRoutingApplicationService(
-	voyageRepo secondary.VoyageRepository,
-	locationRepo secondary.LocationRepository,
+	voyageRepo routingsecondary.VoyageRepository,
+	locationRepo routingsecondary.LocationRepository,
 	logger *slog.Logger,
 ) *RoutingApplicationService {
 	return &RoutingApplicationService{
@@ -34,7 +34,7 @@ func NewRoutingApplicationService(
 }
 
 // FindOptimalItineraries finds the best routes that satisfy the given specification
-func (s *RoutingApplicationService) FindOptimalItineraries(ctx context.Context, routeSpec domain.RouteSpecification) ([]domain.Itinerary, error) {
+func (s *RoutingApplicationService) FindOptimalItineraries(ctx context.Context, routeSpec routingdomain.RouteSpecification) ([]routingdomain.Itinerary, error) {
 	// Check permissions
 	claims, err := auth.ExtractClaims(ctx)
 	if err != nil {
@@ -55,17 +55,17 @@ func (s *RoutingApplicationService) FindOptimalItineraries(ctx context.Context, 
 	arrivalDeadline, err := time.Parse(time.RFC3339, routeSpec.ArrivalDeadline)
 	if err != nil {
 		s.logger.Error("Invalid arrival deadline format", "error", err)
-		return nil, domain.NewDomainValidationError("invalid arrival deadline format, expected RFC3339", err)
+		return nil, routingdomain.NewDomainValidationError("invalid arrival deadline format, expected RFC3339", err)
 	}
 
 	// Convert external route spec to internal format
-	origin, err := domain.NewUnLocode(routeSpec.Origin)
+	origin, err := routingdomain.NewUnLocode(routeSpec.Origin)
 	if err != nil {
 		s.logger.Error("Invalid origin UN/LOCODE", "error", err)
 		return nil, err
 	}
 
-	destination, err := domain.NewUnLocode(routeSpec.Destination)
+	destination, err := routingdomain.NewUnLocode(routeSpec.Destination)
 	if err != nil {
 		s.logger.Error("Invalid destination UN/LOCODE", "error", err)
 		return nil, err
@@ -75,7 +75,7 @@ func (s *RoutingApplicationService) FindOptimalItineraries(ctx context.Context, 
 	allVoyages, err := s.voyageRepo.FindAll()
 	if err != nil {
 		s.logger.Error("Failed to retrieve voyages", "error", err)
-		return nil, domain.NewDomainValidationError("failed to retrieve voyages", err)
+		return nil, routingdomain.NewDomainValidationError("failed to retrieve voyages", err)
 	}
 
 	// Find route candidates using simplified algorithm
@@ -89,7 +89,7 @@ func (s *RoutingApplicationService) FindOptimalItineraries(ctx context.Context, 
 }
 
 // findRoutes implements a simplified routing algorithm
-func (s *RoutingApplicationService) findRoutes(voyages []domain.Voyage, origin, destination domain.UnLocode, deadline time.Time) []routeCandidate {
+func (s *RoutingApplicationService) findRoutes(voyages []routingdomain.Voyage, origin, destination routingdomain.UnLocode, deadline time.Time) []routeCandidate {
 	var candidates []routeCandidate
 
 	// Find direct routes
@@ -110,15 +110,15 @@ type routeCandidate struct {
 
 // routeLeg represents an internal route leg
 type routeLeg struct {
-	voyageNumber   domain.VoyageNumber
-	loadLocation   domain.UnLocode
-	unloadLocation domain.UnLocode
+	voyageNumber   routingdomain.VoyageNumber
+	loadLocation   routingdomain.UnLocode
+	unloadLocation routingdomain.UnLocode
 	loadTime       time.Time
 	unloadTime     time.Time
 }
 
 // findDirectRoutes finds routes that can be completed with a single voyage
-func (s *RoutingApplicationService) findDirectRoutes(voyages []domain.Voyage, origin, destination domain.UnLocode, deadline time.Time) []routeCandidate {
+func (s *RoutingApplicationService) findDirectRoutes(voyages []routingdomain.Voyage, origin, destination routingdomain.UnLocode, deadline time.Time) []routeCandidate {
 	var candidates []routeCandidate
 
 	for _, voyage := range voyages {
@@ -150,7 +150,7 @@ func (s *RoutingApplicationService) findDirectRoutes(voyages []domain.Voyage, or
 }
 
 // findOneConnectionRoutes finds routes that require exactly one connection
-func (s *RoutingApplicationService) findOneConnectionRoutes(voyages []domain.Voyage, origin, destination domain.UnLocode, deadline time.Time) []routeCandidate {
+func (s *RoutingApplicationService) findOneConnectionRoutes(voyages []routingdomain.Voyage, origin, destination routingdomain.UnLocode, deadline time.Time) []routeCandidate {
 	var candidates []routeCandidate
 
 	// Find all intermediate locations
@@ -183,8 +183,8 @@ func (s *RoutingApplicationService) findOneConnectionRoutes(voyages []domain.Voy
 }
 
 // findIntermediateLocations finds potential connection points
-func (s *RoutingApplicationService) findIntermediateLocations(voyages []domain.Voyage, origin, destination domain.UnLocode) []domain.UnLocode {
-	locationSet := make(map[domain.UnLocode]bool)
+func (s *RoutingApplicationService) findIntermediateLocations(voyages []routingdomain.Voyage, origin, destination routingdomain.UnLocode) []routingdomain.UnLocode {
+	locationSet := make(map[routingdomain.UnLocode]bool)
 
 	for _, voyage := range voyages {
 		schedule := voyage.GetSchedule()
@@ -198,7 +198,7 @@ func (s *RoutingApplicationService) findIntermediateLocations(voyages []domain.V
 		}
 	}
 
-	var intermediates []domain.UnLocode
+	var intermediates []routingdomain.UnLocode
 	for location := range locationSet {
 		intermediates = append(intermediates, location)
 	}
@@ -207,7 +207,7 @@ func (s *RoutingApplicationService) findIntermediateLocations(voyages []domain.V
 }
 
 // findLegsConnecting finds voyage legs that connect two locations
-func (s *RoutingApplicationService) findLegsConnecting(voyages []domain.Voyage, origin, destination domain.UnLocode) []routeLeg {
+func (s *RoutingApplicationService) findLegsConnecting(voyages []routingdomain.Voyage, origin, destination routingdomain.UnLocode) []routeLeg {
 	var legs []routeLeg
 
 	for _, voyage := range voyages {
@@ -230,14 +230,14 @@ func (s *RoutingApplicationService) findLegsConnecting(voyages []domain.Voyage, 
 }
 
 // convertToExternalFormat converts internal route candidates to external itinerary format
-func (s *RoutingApplicationService) convertToExternalFormat(candidates []routeCandidate) []domain.Itinerary {
-	var itineraries []domain.Itinerary
+func (s *RoutingApplicationService) convertToExternalFormat(candidates []routeCandidate) []routingdomain.Itinerary {
+	var itineraries []routingdomain.Itinerary
 
 	for _, candidate := range candidates {
-		var legs []domain.Leg
+		var legs []routingdomain.Leg
 
 		for _, leg := range candidate.legs {
-			externalLeg := domain.Leg{
+			externalLeg := routingdomain.Leg{
 				VoyageNumber:   leg.voyageNumber.String(),
 				LoadLocation:   leg.loadLocation.String(),
 				UnloadLocation: leg.unloadLocation.String(),
@@ -247,7 +247,7 @@ func (s *RoutingApplicationService) convertToExternalFormat(candidates []routeCa
 			legs = append(legs, externalLeg)
 		}
 
-		itinerary := domain.Itinerary{
+		itinerary := routingdomain.Itinerary{
 			Legs: legs,
 		}
 		itineraries = append(itineraries, itinerary)
@@ -257,7 +257,7 @@ func (s *RoutingApplicationService) convertToExternalFormat(candidates []routeCa
 }
 
 // ListAllVoyages retrieves all voyages from the repository
-func (s *RoutingApplicationService) ListAllVoyages(ctx context.Context) ([]domain.Voyage, error) {
+func (s *RoutingApplicationService) ListAllVoyages(ctx context.Context) ([]routingdomain.Voyage, error) {
 	// Check permissions
 	claims, err := auth.ExtractClaims(ctx)
 	if err != nil {
@@ -283,7 +283,7 @@ func (s *RoutingApplicationService) ListAllVoyages(ctx context.Context) ([]domai
 }
 
 // ListAllLocations retrieves all locations from the repository
-func (s *RoutingApplicationService) ListAllLocations(ctx context.Context) ([]domain.Location, error) {
+func (s *RoutingApplicationService) ListAllLocations(ctx context.Context) ([]routingdomain.Location, error) {
 	// Check permissions
 	claims, err := auth.ExtractClaims(ctx)
 	if err != nil {

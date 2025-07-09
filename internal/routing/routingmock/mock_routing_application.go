@@ -1,4 +1,4 @@
-package mock
+package routingmock
 
 import (
 	"context"
@@ -7,29 +7,29 @@ import (
 	"math/rand"
 	"time"
 
-	"go_hex/internal/routing/application"
-	"go_hex/internal/routing/domain"
-	"go_hex/internal/routing/ports/primary"
-	"go_hex/internal/routing/ports/secondary"
+	"go_hex/internal/routing/ports/routingprimary"
+	"go_hex/internal/routing/ports/routingsecondary"
+	"go_hex/internal/routing/routingapplication"
+	"go_hex/internal/routing/routingdomain"
 )
 
 // MockRoutingApplication embeds the real application service but provides test data population capabilities
 type MockRoutingApplication struct {
-	*application.RoutingApplicationService
+	*routingapplication.RoutingApplicationService
 	logger       *slog.Logger
 	random       *rand.Rand
-	voyageRepo   secondary.VoyageRepository
-	locationRepo secondary.LocationRepository
+	voyageRepo   routingsecondary.VoyageRepository
+	locationRepo routingsecondary.LocationRepository
 }
 
 // NewMockRoutingApplication creates a mock routing application with embedded real application service
 func NewMockRoutingApplication(
-	voyageRepo secondary.VoyageRepository,
-	locationRepo secondary.LocationRepository,
+	voyageRepo routingsecondary.VoyageRepository,
+	locationRepo routingsecondary.LocationRepository,
 	logger *slog.Logger,
 	seed int64,
 ) *MockRoutingApplication {
-	realApp := application.NewRoutingApplicationService(voyageRepo, locationRepo, logger)
+	realApp := routingapplication.NewRoutingApplicationService(voyageRepo, locationRepo, logger)
 
 	return &MockRoutingApplication{
 		RoutingApplicationService: realApp,
@@ -67,14 +67,14 @@ func (m *MockRoutingApplication) GenerateTestData() {
 }
 
 // PopulateTestLocations creates test location data through the domain layer
-func (m *MockRoutingApplication) PopulateTestLocations(ctx context.Context, locationSpecs []TestLocationSpec) ([]domain.Location, error) {
+func (m *MockRoutingApplication) PopulateTestLocations(ctx context.Context, locationSpecs []TestLocationSpec) ([]routingdomain.Location, error) {
 	m.logger.Info("Populating test locations", "count", len(locationSpecs))
 
-	var locations []domain.Location
+	var locations []routingdomain.Location
 
 	for _, spec := range locationSpecs {
 		// Create location through domain constructor to ensure business rules
-		location, err := domain.NewLocation(spec.Code, spec.Name, spec.Country)
+		location, err := routingdomain.NewLocation(spec.Code, spec.Name, spec.Country)
 		if err != nil {
 			m.logger.Error("Failed to create test location", "error", err, "code", spec.Code)
 			return nil, fmt.Errorf("failed to create location %s: %w", spec.Code, err)
@@ -95,14 +95,14 @@ func (m *MockRoutingApplication) PopulateTestLocations(ctx context.Context, loca
 }
 
 // PopulateTestVoyages creates test voyage data with current-relative dates
-func (m *MockRoutingApplication) PopulateTestVoyages(ctx context.Context, locations []domain.Location, count int) ([]domain.Voyage, error) {
+func (m *MockRoutingApplication) PopulateTestVoyages(ctx context.Context, locations []routingdomain.Location, count int) ([]routingdomain.Voyage, error) {
 	m.logger.Info("Populating test voyages", "count", count, "available_locations", len(locations))
 
 	if len(locations) < 2 {
 		return nil, fmt.Errorf("need at least 2 locations to create voyages, got %d", len(locations))
 	}
 
-	var voyages []domain.Voyage
+	var voyages []routingdomain.Voyage
 
 	for i := 0; i < count; i++ {
 		// Generate voyage with 2-4 carrier movements
@@ -110,7 +110,7 @@ func (m *MockRoutingApplication) PopulateTestVoyages(ctx context.Context, locati
 		movements := m.generateCarrierMovements(locations, movementCount)
 
 		// Create voyage through domain constructor
-		voyage, err := domain.NewVoyage(movements)
+		voyage, err := routingdomain.NewVoyage(movements)
 		if err != nil {
 			m.logger.Error("Failed to create test voyage", "error", err)
 			continue // Skip this voyage and try next
@@ -131,12 +131,12 @@ func (m *MockRoutingApplication) PopulateTestVoyages(ctx context.Context, locati
 }
 
 // generateCarrierMovements creates a realistic sequence of carrier movements
-func (m *MockRoutingApplication) generateCarrierMovements(locations []domain.Location, count int) []domain.CarrierMovement {
+func (m *MockRoutingApplication) generateCarrierMovements(locations []routingdomain.Location, count int) []routingdomain.CarrierMovement {
 	if len(locations) < 2 || count < 1 {
 		return nil
 	}
 
-	movements := make([]domain.CarrierMovement, 0, count)
+	movements := make([]routingdomain.CarrierMovement, 0, count)
 
 	// Pick a random starting location
 	currentLocationIdx := m.random.Intn(len(locations))
@@ -167,7 +167,7 @@ func (m *MockRoutingApplication) generateCarrierMovements(locations []domain.Loc
 		arrivalTime := departureTime.Add(time.Duration(travelHours) * time.Hour)
 
 		// Create movement through domain constructor
-		movement, err := domain.NewCarrierMovement(
+		movement, err := routingdomain.NewCarrierMovement(
 			fromLocation.GetUnLocode(),
 			toLocation.GetUnLocode(),
 			departureTime,
@@ -225,4 +225,4 @@ type TestLocationSpec struct {
 }
 
 // Ensure MockRoutingApplication implements primary ports
-var _ primary.RouteFinder = (*MockRoutingApplication)(nil)
+var _ routingprimary.RouteFinder = (*MockRoutingApplication)(nil)

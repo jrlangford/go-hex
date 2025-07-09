@@ -16,12 +16,12 @@ import (
 	"go_hex/internal/handling/handlingapplication"
 	"go_hex/internal/handling/handlingdomain"
 	"go_hex/internal/handling/ports/handlingprimary"
-	routingApp "go_hex/internal/routing/application"
-	routingPorts "go_hex/internal/routing/ports/primary"
+	"go_hex/internal/routing/ports/routingprimary"
+	"go_hex/internal/routing/routingapplication"
 
 	mockBookingApp "go_hex/internal/booking/bookingmock"
 	mockHandlingApp "go_hex/internal/handling/handlingmock"
-	mockRoutingApp "go_hex/internal/routing/mock"
+	mockRoutingApp "go_hex/internal/routing/routingmock"
 
 	"go_hex/internal/support/auth"
 	"go_hex/internal/support/config"
@@ -62,7 +62,7 @@ func wireAppDependencies(cfg *config.Config, logger *slog.Logger) *httpadapter.H
 
 	var bookingService bookingprimary.BookingService
 	var handlingReportService handlingprimary.HandlingReportService
-	var routingService routingPorts.RouteFinder
+	var routingService routingprimary.RouteFinder
 
 	if cfg.IsMockMode() {
 		logger.Info("Running in mock mode with pre-populated mock data", "mode", cfg.Mode, "isMockMode", cfg.IsMockMode())
@@ -135,7 +135,7 @@ func wireAppDependencies(cfg *config.Config, logger *slog.Logger) *httpadapter.H
 		logger.Info("Running in live mode", "mode", cfg.Mode, "isMockMode", cfg.IsMockMode(), "isLiveMode", cfg.IsLiveMode())
 
 		// Create Routing context application service
-		routingService = routingApp.NewRoutingApplicationService(
+		routingService = routingapplication.NewRoutingApplicationService(
 			voyageRepo,
 			locationRepo,
 			logger,
