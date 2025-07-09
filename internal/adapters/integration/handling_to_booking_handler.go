@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
-	bookingDomain "go_hex/internal/booking/domain"
-	bookingPrimary "go_hex/internal/booking/ports/primary"
+	"go_hex/internal/booking/bookingdomain"
+	"go_hex/internal/booking/ports/bookingprimary"
 	handlingDomain "go_hex/internal/handling/domain"
 	"go_hex/internal/support/basedomain"
 )
@@ -13,13 +13,13 @@ import (
 // HandlingToBookingEventHandler handles events from Handling context
 // and applies them to the Booking context via Anti-Corruption Layer
 type HandlingToBookingEventHandler struct {
-	bookingService bookingPrimary.BookingService
+	bookingService bookingprimary.BookingService
 	logger         *slog.Logger
 }
 
 // NewHandlingToBookingEventHandler creates a new event handler for Handling->Booking integration
 func NewHandlingToBookingEventHandler(
-	bookingService bookingPrimary.BookingService,
+	bookingService bookingprimary.BookingService,
 	logger *slog.Logger,
 ) *HandlingToBookingEventHandler {
 	return &HandlingToBookingEventHandler{
@@ -36,18 +36,18 @@ func (h *HandlingToBookingEventHandler) HandleCargoWasHandled(ctx context.Contex
 	handlingEvent, ok := event.(handlingDomain.HandlingEventRegisteredEvent)
 	if !ok {
 		h.logger.Error("Invalid event type for HandlingEventRegistered handler")
-		return bookingDomain.NewDomainValidationError("invalid event type", nil)
+		return bookingdomain.NewDomainValidationError("invalid event type", nil)
 	}
 
 	// Convert tracking ID
-	trackingId, err := bookingDomain.TrackingIdFromString(handlingEvent.TrackingId)
+	trackingId, err := bookingdomain.TrackingIdFromString(handlingEvent.TrackingId)
 	if err != nil {
 		h.logger.Error("Invalid tracking ID in handling event", "trackingId", handlingEvent.TrackingId, "error", err)
 		return err
 	}
 
 	// Convert handling event to delivery update format (Anti-Corruption Layer)
-	handlingEventSummary := bookingDomain.HandlingEventSummary{
+	handlingEventSummary := bookingdomain.HandlingEventSummary{
 		Type:         string(handlingEvent.EventType),
 		Location:     handlingEvent.Location,
 		VoyageNumber: handlingEvent.VoyageNumber,
@@ -55,7 +55,7 @@ func (h *HandlingToBookingEventHandler) HandleCargoWasHandled(ctx context.Contex
 	}
 
 	// Update cargo delivery status in Booking context
-	if err := h.bookingService.UpdateCargoDelivery(ctx, trackingId, []bookingDomain.HandlingEventSummary{handlingEventSummary}); err != nil {
+	if err := h.bookingService.UpdateCargoDelivery(ctx, trackingId, []bookingdomain.HandlingEventSummary{handlingEventSummary}); err != nil {
 		h.logger.Error("Failed to update cargo delivery status",
 			"trackingId", trackingId.String(),
 			"error", err)

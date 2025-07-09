@@ -1,4 +1,4 @@
-package application
+package bookingapplication
 
 import (
 	"go_hex/internal/support/auth"

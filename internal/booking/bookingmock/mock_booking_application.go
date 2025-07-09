@@ -1,4 +1,4 @@
-package mock
+package bookingmock
 
 import (
 	"context"
@@ -7,29 +7,29 @@ import (
 	"math/rand"
 	"time"
 
-	"go_hex/internal/booking/application"
-	"go_hex/internal/booking/domain"
-	"go_hex/internal/booking/ports/primary"
-	"go_hex/internal/booking/ports/secondary"
+	"go_hex/internal/booking/bookingapplication"
+	"go_hex/internal/booking/bookingdomain"
+	"go_hex/internal/booking/ports/bookingprimary"
+	"go_hex/internal/booking/ports/bookingsecondary"
 	"go_hex/internal/support/auth"
 )
 
 // MockBookingApplication embeds the real application service but provides test data population capabilities
 type MockBookingApplication struct {
-	*application.BookingApplicationService
+	*bookingapplication.BookingApplicationService
 	logger *slog.Logger
 	random *rand.Rand
 }
 
 // NewMockBookingApplication creates a mock booking application with embedded real application service
 func NewMockBookingApplication(
-	cargoRepo secondary.CargoRepository,
-	routingService secondary.RoutingService,
-	eventPublisher secondary.EventPublisher,
+	cargoRepo bookingsecondary.CargoRepository,
+	routingService bookingsecondary.RoutingService,
+	eventPublisher bookingsecondary.EventPublisher,
 	logger *slog.Logger,
 	seed int64,
 ) *MockBookingApplication {
-	realApp := application.NewBookingApplicationService(cargoRepo, routingService, eventPublisher, logger)
+	realApp := bookingapplication.NewBookingApplicationService(cargoRepo, routingService, eventPublisher, logger)
 
 	return &MockBookingApplication{
 		BookingApplicationService: realApp,
@@ -39,13 +39,13 @@ func NewMockBookingApplication(
 }
 
 // PopulateTestCargo creates test cargo data using business logic through the application layer
-func (m *MockBookingApplication) PopulateTestCargo(ctx context.Context, scenarios []TestCargoScenario) ([]domain.Cargo, error) {
+func (m *MockBookingApplication) PopulateTestCargo(ctx context.Context, scenarios []TestCargoScenario) ([]bookingdomain.Cargo, error) {
 	m.logger.Info("Populating test cargo through booking application", "scenarios", len(scenarios))
 
 	// Create authenticated context for internal operations
 	testCtx := m.createTestContext(ctx)
 
-	var cargos []domain.Cargo
+	var cargos []bookingdomain.Cargo
 
 	for _, scenario := range scenarios {
 		// Generate arrival deadline in the future (7-60 days from now)
@@ -132,9 +132,9 @@ func (m *MockBookingApplication) createTestContext(ctx context.Context) context.
 type TestCargoScenario struct {
 	Origin      string
 	Destination string
-	Itinerary   *domain.Itinerary
+	Itinerary   *bookingdomain.Itinerary
 }
 
 // Ensure MockBookingApplication implements primary ports
-var _ primary.BookingService = (*MockBookingApplication)(nil)
-var _ primary.CargoTracker = (*MockBookingApplication)(nil)
+var _ bookingprimary.BookingService = (*MockBookingApplication)(nil)
+var _ bookingprimary.CargoTracker = (*MockBookingApplication)(nil)

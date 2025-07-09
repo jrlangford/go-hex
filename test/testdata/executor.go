@@ -7,8 +7,8 @@ import (
 	"log/slog"
 	"time"
 
-	bookingDomain "go_hex/internal/booking/domain"
-	bookingPrimary "go_hex/internal/booking/ports/primary"
+	"go_hex/internal/booking/bookingdomain"
+	"go_hex/internal/booking/ports/bookingprimary"
 	handlingDomain "go_hex/internal/handling/domain"
 	handlingPrimary "go_hex/internal/handling/ports/primary"
 )
@@ -28,7 +28,7 @@ func NewScenarioExecutor(env *TestEnvironment) *ScenarioExecutor {
 }
 
 // ExecuteCargoScenario runs a complete cargo shipping scenario
-func (se *ScenarioExecutor) ExecuteCargoScenario(ctx context.Context, scenario CargoTestData, bookingService bookingPrimary.BookingService, handlingService handlingPrimary.HandlingReportService) error {
+func (se *ScenarioExecutor) ExecuteCargoScenario(ctx context.Context, scenario CargoTestData, bookingService bookingprimary.BookingService, handlingService handlingPrimary.HandlingReportService) error {
 
 	se.logger.Info("Executing cargo scenario",
 		"origin", scenario.Origin,
@@ -118,7 +118,7 @@ func (se *ScenarioExecutor) ExecuteCargoScenario(ctx context.Context, scenario C
 }
 
 // ExecuteAllScenarios runs all generated cargo scenarios
-func (se *ScenarioExecutor) ExecuteAllScenarios(ctx context.Context, bookingService bookingPrimary.BookingService, handlingService handlingPrimary.HandlingReportService) error {
+func (se *ScenarioExecutor) ExecuteAllScenarios(ctx context.Context, bookingService bookingprimary.BookingService, handlingService handlingPrimary.HandlingReportService) error {
 
 	scenarios := se.env.GetTestScenarios()
 	se.logger.Info("Executing all cargo scenarios", "count", len(scenarios))
@@ -143,7 +143,7 @@ func (se *ScenarioExecutor) ExecuteAllScenarios(ctx context.Context, bookingServ
 }
 
 // GenerateHandlingEventsForCargo creates additional handling events for an existing cargo
-func (se *ScenarioExecutor) GenerateHandlingEventsForCargo(cargo bookingDomain.Cargo, eventCount int) []HandlingEventData {
+func (se *ScenarioExecutor) GenerateHandlingEventsForCargo(cargo bookingdomain.Cargo, eventCount int) []HandlingEventData {
 	generator := NewTestDataGenerator(0, se.logger)
 
 	// Get cargo details for context

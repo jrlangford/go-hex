@@ -3,7 +3,7 @@ package http
 import (
 	"time"
 
-	"go_hex/internal/booking/domain"
+	"go_hex/internal/booking/bookingdomain"
 	handlingDomain "go_hex/internal/handling/domain"
 	routingDomain "go_hex/internal/routing/domain"
 )
@@ -122,7 +122,7 @@ type RouteRequest struct {
 
 // Helper functions to convert domain objects to DTOs
 
-func CargoToResponse(cargo domain.Cargo) CargoDetailsResponse {
+func CargoToResponse(cargo bookingdomain.Cargo) CargoDetailsResponse {
 	delivery := cargo.GetDelivery()
 
 	response := CargoDetailsResponse{
@@ -133,7 +133,7 @@ func CargoToResponse(cargo domain.Cargo) CargoDetailsResponse {
 		RoutingStatus:    string(delivery.RoutingStatus),
 		TransportStatus:  string(delivery.TransportStatus),
 		IsOnTrack:        delivery.IsOnTrack(),
-		IsMisdirected:    delivery.RoutingStatus == domain.RoutingStatusMisdirected,
+		IsMisdirected:    delivery.RoutingStatus == bookingdomain.RoutingStatusMisdirected,
 		IsUnloadedAtDest: delivery.IsUnloadedAtDest,
 	}
 
@@ -152,7 +152,7 @@ func CargoToResponse(cargo domain.Cargo) CargoDetailsResponse {
 	return response
 }
 
-func ItineraryToDTO(itinerary domain.Itinerary) *ItineraryDTO {
+func ItineraryToDTO(itinerary bookingdomain.Itinerary) *ItineraryDTO {
 	dto := &ItineraryDTO{
 		Legs: make([]LegDTO, len(itinerary.Legs)),
 	}
@@ -170,7 +170,7 @@ func ItineraryToDTO(itinerary domain.Itinerary) *ItineraryDTO {
 	return dto
 }
 
-func BookCargoToResponse(cargo domain.Cargo) BookCargoResponse {
+func BookCargoToResponse(cargo bookingdomain.Cargo) BookCargoResponse {
 	return BookCargoResponse{
 		TrackingId:      cargo.GetTrackingId().String(),
 		Origin:          cargo.GetRouteSpecification().Origin,

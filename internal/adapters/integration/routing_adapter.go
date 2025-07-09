@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	bookingDomain "go_hex/internal/booking/domain"
-	bookingSecondary "go_hex/internal/booking/ports/secondary"
+	"go_hex/internal/booking/bookingdomain"
+	"go_hex/internal/booking/ports/bookingsecondary"
 	routingDomain "go_hex/internal/routing/domain"
 	routingPorts "go_hex/internal/routing/ports/primary"
 )
@@ -17,14 +17,14 @@ type RoutingServiceAdapter struct {
 }
 
 // NewRoutingServiceAdapter creates a new adapter for the routing service
-func NewRoutingServiceAdapter(routingService routingPorts.RouteFinder) bookingSecondary.RoutingService {
+func NewRoutingServiceAdapter(routingService routingPorts.RouteFinder) bookingsecondary.RoutingService {
 	return &RoutingServiceAdapter{
 		routingService: routingService,
 	}
 }
 
 // FindOptimalItineraries adapts the routing service's interface to the booking context's needs
-func (a *RoutingServiceAdapter) FindOptimalItineraries(ctx context.Context, routeSpec bookingDomain.RouteSpecification) ([]bookingDomain.Itinerary, error) {
+func (a *RoutingServiceAdapter) FindOptimalItineraries(ctx context.Context, routeSpec bookingdomain.RouteSpecification) ([]bookingdomain.Itinerary, error) {
 	// Convert Booking domain RouteSpecification to Routing domain format (Anti-Corruption Layer)
 	routingRouteSpec := routingDomain.RouteSpecification{
 		Origin:          routeSpec.Origin,
@@ -39,9 +39,9 @@ func (a *RoutingServiceAdapter) FindOptimalItineraries(ctx context.Context, rout
 	}
 
 	// Convert Routing domain Itineraries to Booking domain format (Anti-Corruption Layer)
-	bookingItineraries := make([]bookingDomain.Itinerary, len(routingItineraries))
+	bookingItineraries := make([]bookingdomain.Itinerary, len(routingItineraries))
 	for i, routingItinerary := range routingItineraries {
-		bookingLegs := make([]bookingDomain.Leg, len(routingItinerary.Legs))
+		bookingLegs := make([]bookingdomain.Leg, len(routingItinerary.Legs))
 		for j, routingLeg := range routingItinerary.Legs {
 			// Parse time strings from routing context
 			loadTime, err := time.Parse(time.RFC3339, routingLeg.LoadTime)
@@ -53,7 +53,7 @@ func (a *RoutingServiceAdapter) FindOptimalItineraries(ctx context.Context, rout
 				return nil, err
 			}
 
-			bookingLeg, err := bookingDomain.NewLeg(
+			bookingLeg, err := bookingdomain.NewLeg(
 				routingLeg.VoyageNumber,
 				routingLeg.LoadLocation,
 				routingLeg.UnloadLocation,
@@ -67,7 +67,7 @@ func (a *RoutingServiceAdapter) FindOptimalItineraries(ctx context.Context, rout
 			bookingLegs[j] = bookingLeg
 		}
 
-		bookingItinerary, err := bookingDomain.NewItinerary(bookingLegs)
+		bookingItinerary, err := bookingdomain.NewItinerary(bookingLegs)
 		if err != nil {
 			return nil, err
 		}

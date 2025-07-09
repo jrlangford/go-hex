@@ -10,7 +10,7 @@ import (
 	"go_hex/internal/adapters/driven/in_memory_handling_repo"
 	"go_hex/internal/adapters/driven/in_memory_location_repo"
 	"go_hex/internal/adapters/driven/in_memory_voyage_repo"
-	bookingApp "go_hex/internal/booking/application"
+	"go_hex/internal/booking/bookingapplication"
 	handlingApp "go_hex/internal/handling/application"
 	routingApp "go_hex/internal/routing/application"
 )
@@ -24,7 +24,7 @@ type TestEnvironment struct {
 	HandlingEventRepo *in_memory_handling_repo.InMemoryHandlingEventRepository
 
 	// Application Services
-	BookingService        *bookingApp.BookingApplicationService
+	BookingService        *bookingapplication.BookingApplicationService
 	RoutingService        *routingApp.RoutingApplicationService
 	HandlingReportService *handlingApp.HandlingReportService
 

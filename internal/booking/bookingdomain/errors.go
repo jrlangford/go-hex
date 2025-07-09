@@ -1,4 +1,4 @@
-package domain
+package bookingdomain
 
 import "go_hex/internal/support/errors"
 

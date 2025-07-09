@@ -1,4 +1,4 @@
-package application
+package bookingapplication
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"go_hex/internal/booking/domain"
+	"go_hex/internal/booking/bookingdomain"
 	"go_hex/internal/support/auth"
 	"go_hex/internal/support/basedomain"
 	"log/slog"
@@ -21,27 +21,27 @@ type MockCargoRepository struct {
 	mock.Mock
 }
 
-func (m *MockCargoRepository) Store(cargo domain.Cargo) error {
+func (m *MockCargoRepository) Store(cargo bookingdomain.Cargo) error {
 	args := m.Called(cargo)
 	return args.Error(0)
 }
 
-func (m *MockCargoRepository) FindByTrackingId(id domain.TrackingId) (domain.Cargo, error) {
+func (m *MockCargoRepository) FindByTrackingId(id bookingdomain.TrackingId) (bookingdomain.Cargo, error) {
 	args := m.Called(id)
-	return args.Get(0).(domain.Cargo), args.Error(1)
+	return args.Get(0).(bookingdomain.Cargo), args.Error(1)
 }
 
-func (m *MockCargoRepository) FindAll() ([]domain.Cargo, error) {
+func (m *MockCargoRepository) FindAll() ([]bookingdomain.Cargo, error) {
 	args := m.Called()
-	return args.Get(0).([]domain.Cargo), args.Error(1)
+	return args.Get(0).([]bookingdomain.Cargo), args.Error(1)
 }
 
-func (m *MockCargoRepository) FindUnrouted() ([]domain.Cargo, error) {
+func (m *MockCargoRepository) FindUnrouted() ([]bookingdomain.Cargo, error) {
 	args := m.Called()
-	return args.Get(0).([]domain.Cargo), args.Error(1)
+	return args.Get(0).([]bookingdomain.Cargo), args.Error(1)
 }
 
-func (m *MockCargoRepository) Update(cargo domain.Cargo) error {
+func (m *MockCargoRepository) Update(cargo bookingdomain.Cargo) error {
 	args := m.Called(cargo)
 	return args.Error(0)
 }
@@ -50,9 +50,9 @@ type MockRoutingService struct {
 	mock.Mock
 }
 
-func (m *MockRoutingService) FindOptimalItineraries(ctx context.Context, routeSpec domain.RouteSpecification) ([]domain.Itinerary, error) {
+func (m *MockRoutingService) FindOptimalItineraries(ctx context.Context, routeSpec bookingdomain.RouteSpecification) ([]bookingdomain.Itinerary, error) {
 	args := m.Called(ctx, routeSpec)
-	return args.Get(0).([]domain.Itinerary), args.Error(1)
+	return args.Get(0).([]bookingdomain.Itinerary), args.Error(1)
 }
 
 type MockEventPublisher struct {
@@ -80,7 +80,7 @@ func TestBookingApplicationService_BookNewCargo(t *testing.T) {
 		service, cargoRepo, _, eventPublisher := setup()
 
 		// Setup mocks
-		cargoRepo.On("Store", mock.AnythingOfType("domain.Cargo")).Return(nil)
+		cargoRepo.On("Store", mock.AnythingOfType("bookingdomain.Cargo")).Return(nil)
 		eventPublisher.On("Publish", mock.Anything).Return(nil)
 
 		// Create context with valid claims
@@ -131,7 +131,7 @@ func TestBookingApplicationService_BookNewCargo(t *testing.T) {
 		service, cargoRepo, _, _ := setup()
 
 		// Setup mocks
-		cargoRepo.On("Store", mock.AnythingOfType("domain.Cargo")).Return(errors.New("storage error"))
+		cargoRepo.On("Store", mock.AnythingOfType("bookingdomain.Cargo")).Return(errors.New("storage error"))
 
 		// Create context with valid claims
 		ctx := createContextWithClaims(t, []string{})
@@ -183,7 +183,7 @@ func TestBookingApplicationService_GetCargoDetails(t *testing.T) {
 	t.Run("should fail with unauthorized context", func(t *testing.T) {
 		service, _, _, _ := setup()
 
-		trackingId := domain.NewTrackingId()
+		trackingId := bookingdomain.NewTrackingId()
 		ctx := context.Background()
 
 		// Execute
@@ -196,10 +196,10 @@ func TestBookingApplicationService_GetCargoDetails(t *testing.T) {
 	t.Run("should fail when cargo not found", func(t *testing.T) {
 		service, cargoRepo, _, _ := setup()
 
-		trackingId := domain.NewTrackingId()
+		trackingId := bookingdomain.NewTrackingId()
 
 		// Setup mocks
-		cargoRepo.On("FindByTrackingId", trackingId).Return(domain.Cargo{}, errors.New("not found"))
+		cargoRepo.On("FindByTrackingId", trackingId).Return(bookingdomain.Cargo{}, errors.New("not found"))
 
 		// Create context with valid claims
 		ctx := createContextWithClaims(t, []string{})
@@ -235,7 +235,7 @@ func TestBookingApplicationService_AssignRouteToCargo(t *testing.T) {
 
 		// Setup mocks
 		cargoRepo.On("FindByTrackingId", trackingId).Return(cargo, nil)
-		cargoRepo.On("Update", mock.AnythingOfType("domain.Cargo")).Return(nil)
+		cargoRepo.On("Update", mock.AnythingOfType("bookingdomain.Cargo")).Return(nil)
 		eventPublisher.On("Publish", mock.Anything).Return(nil)
 
 		// Create context with valid claims
@@ -253,8 +253,8 @@ func TestBookingApplicationService_AssignRouteToCargo(t *testing.T) {
 	t.Run("should fail with unauthorized context", func(t *testing.T) {
 		service, _, _, _ := setup()
 
-		trackingId := domain.NewTrackingId()
-		itinerary := domain.Itinerary{}
+		trackingId := bookingdomain.NewTrackingId()
+		itinerary := bookingdomain.Itinerary{}
 		ctx := context.Background()
 
 		// Execute
@@ -267,11 +267,11 @@ func TestBookingApplicationService_AssignRouteToCargo(t *testing.T) {
 	t.Run("should fail when cargo not found", func(t *testing.T) {
 		service, cargoRepo, _, _ := setup()
 
-		trackingId := domain.NewTrackingId()
-		itinerary := domain.Itinerary{}
+		trackingId := bookingdomain.NewTrackingId()
+		itinerary := bookingdomain.Itinerary{}
 
 		// Setup mocks
-		cargoRepo.On("FindByTrackingId", trackingId).Return(domain.Cargo{}, errors.New("not found"))
+		cargoRepo.On("FindByTrackingId", trackingId).Return(bookingdomain.Cargo{}, errors.New("not found"))
 
 		// Create context with valid claims
 		ctx := createContextWithClaims(t, []string{})
@@ -301,7 +301,7 @@ func TestBookingApplicationService_ListAllCargo(t *testing.T) {
 		service, cargoRepo, _, _ := setup()
 
 		// Create test cargo list
-		cargoList := []domain.Cargo{createTestCargo(t), createTestCargo(t)}
+		cargoList := []bookingdomain.Cargo{createTestCargo(t), createTestCargo(t)}
 
 		// Setup mocks
 		cargoRepo.On("FindAll").Return(cargoList, nil)
@@ -334,7 +334,7 @@ func TestBookingApplicationService_ListAllCargo(t *testing.T) {
 		service, cargoRepo, _, _ := setup()
 
 		// Setup mocks
-		cargoRepo.On("FindAll").Return([]domain.Cargo{}, errors.New("repository error"))
+		cargoRepo.On("FindAll").Return([]bookingdomain.Cargo{}, errors.New("repository error"))
 
 		// Create context with valid claims
 		ctx := createContextWithClaims(t, []string{})
@@ -366,7 +366,7 @@ func TestBookingApplicationService_UpdateCargoDelivery(t *testing.T) {
 		// Create test cargo and handling history
 		cargo := createTestCargo(t)
 		trackingId := cargo.GetTrackingId()
-		handlingHistory := []domain.HandlingEventSummary{
+		handlingHistory := []bookingdomain.HandlingEventSummary{
 			{
 				Type:         "RECEIVE",
 				Location:     "USNYC",
@@ -377,7 +377,7 @@ func TestBookingApplicationService_UpdateCargoDelivery(t *testing.T) {
 
 		// Setup mocks
 		cargoRepo.On("FindByTrackingId", trackingId).Return(cargo, nil)
-		cargoRepo.On("Update", mock.AnythingOfType("domain.Cargo")).Return(nil)
+		cargoRepo.On("Update", mock.AnythingOfType("bookingdomain.Cargo")).Return(nil)
 		eventPublisher.On("Publish", mock.Anything).Return(nil)
 
 		// Execute
@@ -393,11 +393,11 @@ func TestBookingApplicationService_UpdateCargoDelivery(t *testing.T) {
 	t.Run("should fail when cargo not found", func(t *testing.T) {
 		service, cargoRepo, _, _ := setup()
 
-		trackingId := domain.NewTrackingId()
-		handlingHistory := []domain.HandlingEventSummary{}
+		trackingId := bookingdomain.NewTrackingId()
+		handlingHistory := []bookingdomain.HandlingEventSummary{}
 
 		// Setup mocks
-		cargoRepo.On("FindByTrackingId", trackingId).Return(domain.Cargo{}, errors.New("not found"))
+		cargoRepo.On("FindByTrackingId", trackingId).Return(bookingdomain.Cargo{}, errors.New("not found"))
 
 		// Execute
 		ctx := context.Background()
@@ -425,14 +425,14 @@ func createContextWithClaims(t *testing.T, permissions []string) context.Context
 	return context.WithValue(context.Background(), auth.ClaimsContextKey, claims)
 }
 
-func createTestCargo(t *testing.T) domain.Cargo {
-	cargo, err := domain.NewCargo("USNYC", "DEHAM", time.Now().Add(24*time.Hour))
+func createTestCargo(t *testing.T) bookingdomain.Cargo {
+	cargo, err := bookingdomain.NewCargo("USNYC", "DEHAM", time.Now().Add(24*time.Hour))
 	require.NoError(t, err)
 	return cargo
 }
 
-func createTestItinerary(t *testing.T, routeSpec domain.RouteSpecification) domain.Itinerary {
-	leg, err := domain.NewLeg(
+func createTestItinerary(t *testing.T, routeSpec bookingdomain.RouteSpecification) bookingdomain.Itinerary {
+	leg, err := bookingdomain.NewLeg(
 		"V001",
 		routeSpec.Origin,
 		routeSpec.Destination,
@@ -441,7 +441,7 @@ func createTestItinerary(t *testing.T, routeSpec domain.RouteSpecification) doma
 	)
 	require.NoError(t, err)
 
-	itinerary, err := domain.NewItinerary([]domain.Leg{leg})
+	itinerary, err := bookingdomain.NewItinerary([]bookingdomain.Leg{leg})
 	require.NoError(t, err)
 
 	return itinerary

@@ -11,15 +11,15 @@ import (
 	"go_hex/internal/adapters/driving/http/middleware"
 	"go_hex/internal/adapters/integration"
 
-	bookingApp "go_hex/internal/booking/application"
-	bookingPorts "go_hex/internal/booking/ports/primary"
+	"go_hex/internal/booking/bookingapplication"
+	"go_hex/internal/booking/ports/bookingprimary"
 	handlingApp "go_hex/internal/handling/application"
 	handlingDomain "go_hex/internal/handling/domain"
 	handlingPorts "go_hex/internal/handling/ports/primary"
 	routingApp "go_hex/internal/routing/application"
 	routingPorts "go_hex/internal/routing/ports/primary"
 
-	mockBookingApp "go_hex/internal/booking/mock"
+	mockBookingApp "go_hex/internal/booking/bookingmock"
 	mockHandlingApp "go_hex/internal/handling/mock"
 	mockRoutingApp "go_hex/internal/routing/mock"
 
@@ -60,7 +60,7 @@ func wireAppDependencies(cfg *config.Config, logger *slog.Logger) *httpadapter.H
 	locationRepo := in_memory_location_repo.NewInMemoryLocationRepository()
 	handlingEventRepo := in_memory_handling_repo.NewInMemoryHandlingEventRepository()
 
-	var bookingService bookingPorts.BookingService
+	var bookingService bookingprimary.BookingService
 	var handlingReportService handlingPorts.HandlingReportService
 	var routingService routingPorts.RouteFinder
 
@@ -145,7 +145,7 @@ func wireAppDependencies(cfg *config.Config, logger *slog.Logger) *httpadapter.H
 		routingAdapter := integration.NewRoutingServiceAdapter(routingService)
 
 		// Create Booking context application service
-		bookingService = bookingApp.NewBookingApplicationService(
+		bookingService = bookingapplication.NewBookingApplicationService(
 			cargoRepo,
 			routingAdapter, // Synchronous integration with routing
 			eventBus,       // Event publisher

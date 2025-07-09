@@ -12,8 +12,8 @@ import (
 	"go_hex/internal/adapters/driven/in_memory_voyage_repo"
 	"go_hex/internal/adapters/driven/stdout_event_publisher"
 	"go_hex/internal/adapters/integration"
-	"go_hex/internal/booking/domain"
-	bookingMock "go_hex/internal/booking/mock"
+	"go_hex/internal/booking/bookingdomain"
+	"go_hex/internal/booking/bookingmock"
 	handlingDomain "go_hex/internal/handling/domain"
 	handlingMock "go_hex/internal/handling/mock"
 	routingDomain "go_hex/internal/routing/domain"
@@ -24,7 +24,7 @@ import (
 // that create test data through proper application layer methods
 type MockTestEnvironment struct {
 	// Mock Applications (embed real applications with test capabilities)
-	BookingApp  *bookingMock.MockBookingApplication
+	BookingApp  *bookingmock.MockBookingApplication
 	RoutingApp  *routingMock.MockRoutingApplication
 	HandlingApp *handlingMock.MockHandlingApplication
 
@@ -60,7 +60,7 @@ func NewMockTestEnvironment(seed int64, logger *slog.Logger) (*MockTestEnvironme
 	// Create mock applications with embedded real applications
 	routingApp := routingMock.NewMockRoutingApplication(voyageRepo, locationRepo, logger, seed)
 	routingServiceAdapter := integration.NewRoutingServiceAdapter(routingApp.RoutingApplicationService)
-	bookingApp := bookingMock.NewMockBookingApplication(cargoRepo, routingServiceAdapter, eventPublisher, logger, seed)
+	bookingApp := bookingmock.NewMockBookingApplication(cargoRepo, routingServiceAdapter, eventPublisher, logger, seed)
 	handlingApp := handlingMock.NewMockHandlingApplication(handlingEventRepo, eventPublisher, logger, seed)
 
 	return &MockTestEnvironment{
@@ -205,7 +205,7 @@ func (env *MockTestEnvironment) PrintTestDataSummary() {
 type TestDataSnapshot struct {
 	Locations      []routingDomain.Location
 	Voyages        []routingDomain.Voyage
-	Cargos         []domain.Cargo
+	Cargos         []bookingdomain.Cargo
 	HandlingEvents []handlingDomain.HandlingEvent
 	Seed           int64
 	GeneratedAt    time.Time

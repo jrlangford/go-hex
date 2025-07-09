@@ -10,7 +10,7 @@ import (
 	"go_hex/internal/adapters/driven/event_bus"
 	"go_hex/internal/adapters/integration"
 
-	bookingApp "go_hex/internal/booking/application"
+	"go_hex/internal/booking/bookingapplication"
 	handlingApp "go_hex/internal/handling/application"
 	handlingDomain "go_hex/internal/handling/domain"
 
@@ -48,7 +48,7 @@ func TestCargoShippingSystemIntegrationWithGeneratedData(t *testing.T) {
 	routingAdapter := integration.NewRoutingServiceAdapter(testEnv.RoutingService)
 
 	// Create Booking context application service
-	bookingService := bookingApp.NewBookingApplicationService(
+	bookingService := bookingapplication.NewBookingApplicationService(
 		testEnv.CargoRepo,
 		routingAdapter, // Synchronous integration with routing
 		eventBus,       // Event publisher
@@ -111,7 +111,7 @@ func TestSpecificCargoScenario(t *testing.T) {
 	routingAdapter := integration.NewRoutingServiceAdapter(testEnv.RoutingService)
 
 	// Create Booking context application service
-	bookingService := bookingApp.NewBookingApplicationService(
+	bookingService := bookingapplication.NewBookingApplicationService(
 		testEnv.CargoRepo,
 		routingAdapter,
 		eventBus,
@@ -176,7 +176,7 @@ func TestStressWithMultipleDataSets(t *testing.T) {
 			eventBus := event_bus.NewInMemoryEventBus(logger)
 			routingAdapter := integration.NewRoutingServiceAdapter(testEnv.RoutingService)
 
-			bookingService := bookingApp.NewBookingApplicationService(
+			bookingService := bookingapplication.NewBookingApplicationService(
 				testEnv.CargoRepo,
 				routingAdapter,
 				eventBus,

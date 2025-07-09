@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	bookingDomain "go_hex/internal/booking/domain"
+	"go_hex/internal/booking/bookingdomain"
 	handlingDomain "go_hex/internal/handling/domain"
 	"go_hex/internal/support/auth"
 
@@ -23,42 +23,42 @@ type MockBookingService struct {
 	mock.Mock
 }
 
-func (m *MockBookingService) BookNewCargo(ctx context.Context, origin, destination, arrivalDeadline string) (bookingDomain.Cargo, error) {
+func (m *MockBookingService) BookNewCargo(ctx context.Context, origin, destination, arrivalDeadline string) (bookingdomain.Cargo, error) {
 	args := m.Called(ctx, origin, destination, arrivalDeadline)
-	return args.Get(0).(bookingDomain.Cargo), args.Error(1)
+	return args.Get(0).(bookingdomain.Cargo), args.Error(1)
 }
 
-func (m *MockBookingService) GetCargoDetails(ctx context.Context, trackingId bookingDomain.TrackingId) (bookingDomain.Cargo, error) {
+func (m *MockBookingService) GetCargoDetails(ctx context.Context, trackingId bookingdomain.TrackingId) (bookingdomain.Cargo, error) {
 	args := m.Called(ctx, trackingId)
-	return args.Get(0).(bookingDomain.Cargo), args.Error(1)
+	return args.Get(0).(bookingdomain.Cargo), args.Error(1)
 }
 
-func (m *MockBookingService) ListAllCargo(ctx context.Context) ([]bookingDomain.Cargo, error) {
+func (m *MockBookingService) ListAllCargo(ctx context.Context) ([]bookingdomain.Cargo, error) {
 	args := m.Called(ctx)
-	return args.Get(0).([]bookingDomain.Cargo), args.Error(1)
+	return args.Get(0).([]bookingdomain.Cargo), args.Error(1)
 }
 
-func (m *MockBookingService) AssignRouteToCargo(ctx context.Context, trackingId bookingDomain.TrackingId, itinerary bookingDomain.Itinerary) error {
+func (m *MockBookingService) AssignRouteToCargo(ctx context.Context, trackingId bookingdomain.TrackingId, itinerary bookingdomain.Itinerary) error {
 	args := m.Called(ctx, trackingId, itinerary)
 	return args.Error(0)
 }
 
-func (m *MockBookingService) RequestRouteCandidates(ctx context.Context, trackingId bookingDomain.TrackingId) ([]bookingDomain.Itinerary, error) {
+func (m *MockBookingService) RequestRouteCandidates(ctx context.Context, trackingId bookingdomain.TrackingId) ([]bookingdomain.Itinerary, error) {
 	args := m.Called(ctx, trackingId)
-	return args.Get(0).([]bookingDomain.Itinerary), args.Error(1)
+	return args.Get(0).([]bookingdomain.Itinerary), args.Error(1)
 }
 
-func (m *MockBookingService) ListUnroutedCargo(ctx context.Context) ([]bookingDomain.Cargo, error) {
+func (m *MockBookingService) ListUnroutedCargo(ctx context.Context) ([]bookingdomain.Cargo, error) {
 	args := m.Called(ctx)
-	return args.Get(0).([]bookingDomain.Cargo), args.Error(1)
+	return args.Get(0).([]bookingdomain.Cargo), args.Error(1)
 }
 
-func (m *MockBookingService) TrackCargo(ctx context.Context, trackingId bookingDomain.TrackingId) (bookingDomain.Cargo, error) {
+func (m *MockBookingService) TrackCargo(ctx context.Context, trackingId bookingdomain.TrackingId) (bookingdomain.Cargo, error) {
 	args := m.Called(ctx, trackingId)
-	return args.Get(0).(bookingDomain.Cargo), args.Error(1)
+	return args.Get(0).(bookingdomain.Cargo), args.Error(1)
 }
 
-func (m *MockBookingService) UpdateCargoDelivery(ctx context.Context, trackingId bookingDomain.TrackingId, handlingHistory []bookingDomain.HandlingEventSummary) error {
+func (m *MockBookingService) UpdateCargoDelivery(ctx context.Context, trackingId bookingdomain.TrackingId, handlingHistory []bookingdomain.HandlingEventSummary) error {
 	args := m.Called(ctx, trackingId, handlingHistory)
 	return args.Error(0)
 }
@@ -198,7 +198,7 @@ func TestRequestRouteCandidatesHandler(t *testing.T) {
 		// Create test data
 		testCargo := createTestCargo(t)
 		trackingId := testCargo.GetTrackingId()
-		testItineraries := []bookingDomain.Itinerary{createTestItinerary(t)}
+		testItineraries := []bookingdomain.Itinerary{createTestItinerary(t)}
 		mockBookingService.On("RequestRouteCandidates", mock.Anything, trackingId).Return(testItineraries, nil)
 
 		// Create request
@@ -263,7 +263,7 @@ func TestAssignRouteHandler(t *testing.T) {
 		// Create test data
 		testCargo := createTestCargo(t)
 		trackingId := testCargo.GetTrackingId()
-		mockBookingService.On("AssignRouteToCargo", mock.Anything, trackingId, mock.AnythingOfType("domain.Itinerary")).Return(nil)
+		mockBookingService.On("AssignRouteToCargo", mock.Anything, trackingId, mock.AnythingOfType("bookingdomain.Itinerary")).Return(nil)
 
 		// Create request
 		reqBody := AssignRouteRequest{
@@ -288,7 +288,7 @@ func TestAssignRouteHandler(t *testing.T) {
 		// Verify
 		assert.Equal(t, http.StatusOK, w.Code)
 		mockBookingService.AssertExpectations(t)
-		mockBookingService.AssertCalled(t, "AssignRouteToCargo", mock.Anything, trackingId, mock.AnythingOfType("domain.Itinerary"))
+		mockBookingService.AssertCalled(t, "AssignRouteToCargo", mock.Anything, trackingId, mock.AnythingOfType("bookingdomain.Itinerary"))
 	})
 }
 
@@ -299,7 +299,7 @@ func TestListCargoHandler(t *testing.T) {
 		handler := createTestHandler(t, mockBookingService, nil, nil, nil)
 
 		// Setup mock
-		testCargos := []bookingDomain.Cargo{createTestCargo(t)}
+		testCargos := []bookingdomain.Cargo{createTestCargo(t)}
 		mockBookingService.On("ListUnroutedCargo", mock.Anything).Return(testCargos, nil)
 
 		// Create request
@@ -345,17 +345,17 @@ func addAuthContext(req *http.Request) *http.Request {
 	return req.WithContext(ctx)
 }
 
-func createTestCargo(t *testing.T) bookingDomain.Cargo {
-	cargo, err := bookingDomain.NewCargo("USNYC", "DEHAM", time.Now().Add(24*time.Hour))
+func createTestCargo(t *testing.T) bookingdomain.Cargo {
+	cargo, err := bookingdomain.NewCargo("USNYC", "DEHAM", time.Now().Add(24*time.Hour))
 	require.NoError(t, err)
 	return cargo
 }
 
-func createTestItinerary(t *testing.T) bookingDomain.Itinerary {
-	leg, err := bookingDomain.NewLeg("V001", "USNYC", "DEHAM", time.Now().Add(time.Hour), time.Now().Add(2*time.Hour))
+func createTestItinerary(t *testing.T) bookingdomain.Itinerary {
+	leg, err := bookingdomain.NewLeg("V001", "USNYC", "DEHAM", time.Now().Add(time.Hour), time.Now().Add(2*time.Hour))
 	require.NoError(t, err)
 
-	itinerary, err := bookingDomain.NewItinerary([]bookingDomain.Leg{leg})
+	itinerary, err := bookingdomain.NewItinerary([]bookingdomain.Leg{leg})
 	require.NoError(t, err)
 
 	return itinerary

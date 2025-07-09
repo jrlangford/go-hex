@@ -15,8 +15,8 @@ import (
 	"go_hex/internal/adapters/integration"
 	"go_hex/internal/support/auth"
 
-	bookingApp "go_hex/internal/booking/application"
-	bookingDomain "go_hex/internal/booking/domain"
+	"go_hex/internal/booking/bookingapplication"
+	"go_hex/internal/booking/bookingdomain"
 	handlingApp "go_hex/internal/handling/application"
 	handlingDomain "go_hex/internal/handling/domain"
 	routingApp "go_hex/internal/routing/application"
@@ -59,7 +59,7 @@ func TestCargoShippingSystemIntegration(t *testing.T) {
 	routingAdapter := integration.NewRoutingServiceAdapter(routingService)
 
 	// Create Booking context application service
-	bookingService := bookingApp.NewBookingApplicationService(
+	bookingService := bookingapplication.NewBookingApplicationService(
 		cargoRepo,
 		routingAdapter, // Synchronous integration with routing
 		eventBus,       // Event publisher
@@ -148,7 +148,7 @@ func TestCargoShippingSystemIntegration(t *testing.T) {
 	}
 
 	delivery := finalCargo.GetDelivery()
-	if delivery.TransportStatus == bookingDomain.TransportStatusNotReceived {
+	if delivery.TransportStatus == bookingdomain.TransportStatusNotReceived {
 		t.Error("Cargo delivery status should have been updated from handling event")
 	} else {
 		t.Logf("Cargo delivery status successfully updated: %s", delivery.TransportStatus)

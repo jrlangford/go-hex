@@ -1,10 +1,10 @@
-package application
+package bookingapplication
 
 import (
 	"context"
-	"go_hex/internal/booking/domain"
-	"go_hex/internal/booking/ports/primary"
-	"go_hex/internal/booking/ports/secondary"
+	"go_hex/internal/booking/bookingdomain"
+	"go_hex/internal/booking/ports/bookingprimary"
+	"go_hex/internal/booking/ports/bookingsecondary"
 	"go_hex/internal/support/auth"
 	"log/slog"
 	"time"
@@ -12,20 +12,20 @@ import (
 
 // BookingApplicationService implements the primary ports for booking operations
 type BookingApplicationService struct {
-	cargoRepo      secondary.CargoRepository
-	routingService secondary.RoutingService
-	eventPublisher secondary.EventPublisher
+	cargoRepo      bookingsecondary.CargoRepository
+	routingService bookingsecondary.RoutingService
+	eventPublisher bookingsecondary.EventPublisher
 	logger         *slog.Logger
 }
 
 // Ensure BookingApplicationService implements the primary ports
-var _ primary.BookingService = (*BookingApplicationService)(nil)
+var _ bookingprimary.BookingService = (*BookingApplicationService)(nil)
 
 // NewBookingApplicationService creates a new BookingApplicationService
 func NewBookingApplicationService(
-	cargoRepo secondary.CargoRepository,
-	routingService secondary.RoutingService,
-	eventPublisher secondary.EventPublisher,
+	cargoRepo bookingsecondary.CargoRepository,
+	routingService bookingsecondary.RoutingService,
+	eventPublisher bookingsecondary.EventPublisher,
 	logger *slog.Logger,
 ) *BookingApplicationService {
 	return &BookingApplicationService{
@@ -37,16 +37,16 @@ func NewBookingApplicationService(
 }
 
 // BookNewCargo initiates the creation of a new cargo based on customer's request
-func (s *BookingApplicationService) BookNewCargo(ctx context.Context, origin, destination string, arrivalDeadlineStr string) (domain.Cargo, error) {
+func (s *BookingApplicationService) BookNewCargo(ctx context.Context, origin, destination string, arrivalDeadlineStr string) (bookingdomain.Cargo, error) {
 	// Check permissions
 	claims, err := auth.ExtractClaims(ctx)
 	if err != nil {
 		s.logger.Warn("Unauthorized cargo booking attempt", "error", err)
-		return domain.Cargo{}, err
+		return bookingdomain.Cargo{}, err
 	}
 	if err := RequireBookingPermission(claims, auth.PermissionBookCargo); err != nil {
 		s.logger.Warn("Unauthorized cargo booking attempt", "error", err)
-		return domain.Cargo{}, err
+		return bookingdomain.Cargo{}, err
 	}
 
 	s.logger.Info("Booking new cargo",
@@ -58,20 +58,20 @@ func (s *BookingApplicationService) BookNewCargo(ctx context.Context, origin, de
 	arrivalDeadline, err := time.Parse(time.RFC3339, arrivalDeadlineStr)
 	if err != nil {
 		s.logger.Error("Invalid arrival deadline format", "error", err)
-		return domain.Cargo{}, domain.NewDomainValidationError("invalid arrival deadline format, expected RFC3339", err)
+		return bookingdomain.Cargo{}, bookingdomain.NewDomainValidationError("invalid arrival deadline format, expected RFC3339", err)
 	}
 
 	// Create new cargo
-	cargo, err := domain.NewCargo(origin, destination, arrivalDeadline)
+	cargo, err := bookingdomain.NewCargo(origin, destination, arrivalDeadline)
 	if err != nil {
 		s.logger.Error("Failed to create new cargo", "error", err)
-		return domain.Cargo{}, err
+		return bookingdomain.Cargo{}, err
 	}
 
 	// Store cargo
 	if err := s.cargoRepo.Store(cargo); err != nil {
 		s.logger.Error("Failed to store cargo", "trackingId", cargo.GetTrackingId(), "error", err)
-		return domain.Cargo{}, err
+		return bookingdomain.Cargo{}, err
 	}
 
 	// Publish domain events
@@ -82,7 +82,7 @@ func (s *BookingApplicationService) BookNewCargo(ctx context.Context, origin, de
 }
 
 // AssignRouteToCargo assigns a chosen itinerary to an existing cargo
-func (s *BookingApplicationService) AssignRouteToCargo(ctx context.Context, trackingId domain.TrackingId, itinerary domain.Itinerary) error {
+func (s *BookingApplicationService) AssignRouteToCargo(ctx context.Context, trackingId bookingdomain.TrackingId, itinerary bookingdomain.Itinerary) error {
 	// Check permissions
 	claims, err := auth.ExtractClaims(ctx)
 	if err != nil {
@@ -123,16 +123,16 @@ func (s *BookingApplicationService) AssignRouteToCargo(ctx context.Context, trac
 }
 
 // GetCargoDetails retrieves the full state of a cargo for tracking
-func (s *BookingApplicationService) GetCargoDetails(ctx context.Context, trackingId domain.TrackingId) (domain.Cargo, error) {
+func (s *BookingApplicationService) GetCargoDetails(ctx context.Context, trackingId bookingdomain.TrackingId) (bookingdomain.Cargo, error) {
 	// Check permissions
 	claims, err := auth.ExtractClaims(ctx)
 	if err != nil {
 		s.logger.Warn("Unauthorized cargo view attempt", "trackingId", trackingId, "error", err)
-		return domain.Cargo{}, err
+		return bookingdomain.Cargo{}, err
 	}
 	if err := RequireBookingPermission(claims, auth.PermissionViewCargo); err != nil {
 		s.logger.Warn("Unauthorized cargo view attempt", "trackingId", trackingId, "error", err)
-		return domain.Cargo{}, err
+		return bookingdomain.Cargo{}, err
 	}
 
 	s.logger.Debug("Getting cargo details", "trackingId", trackingId)
@@ -140,30 +140,30 @@ func (s *BookingApplicationService) GetCargoDetails(ctx context.Context, trackin
 	cargo, err := s.cargoRepo.FindByTrackingId(trackingId)
 	if err != nil {
 		s.logger.Error("Cargo not found", "trackingId", trackingId, "error", err)
-		return domain.Cargo{}, err
+		return bookingdomain.Cargo{}, err
 	}
 
 	return cargo, nil
 }
 
 // TrackCargo returns the current status of cargo by tracking ID (implements CargoTracker)
-func (s *BookingApplicationService) TrackCargo(ctx context.Context, trackingId domain.TrackingId) (domain.Cargo, error) {
+func (s *BookingApplicationService) TrackCargo(ctx context.Context, trackingId bookingdomain.TrackingId) (bookingdomain.Cargo, error) {
 	// Check permissions
 	claims, err := auth.ExtractClaims(ctx)
 	if err != nil {
 		s.logger.Warn("Unauthorized cargo tracking attempt", "trackingId", trackingId, "error", err)
-		return domain.Cargo{}, err
+		return bookingdomain.Cargo{}, err
 	}
 	if err := RequireBookingPermission(claims, auth.PermissionTrackCargo); err != nil {
 		s.logger.Warn("Unauthorized cargo tracking attempt", "trackingId", trackingId, "error", err)
-		return domain.Cargo{}, err
+		return bookingdomain.Cargo{}, err
 	}
 
 	return s.GetCargoDetails(ctx, trackingId)
 }
 
 // ListUnroutedCargo gets all cargo that require route assignment
-func (s *BookingApplicationService) ListUnroutedCargo(ctx context.Context) ([]domain.Cargo, error) {
+func (s *BookingApplicationService) ListUnroutedCargo(ctx context.Context) ([]bookingdomain.Cargo, error) {
 	// Check permissions
 	claims, err := auth.ExtractClaims(ctx)
 	if err != nil {
@@ -188,7 +188,7 @@ func (s *BookingApplicationService) ListUnroutedCargo(ctx context.Context) ([]do
 }
 
 // RequestRouteCandidates gets possible itineraries for a cargo
-func (s *BookingApplicationService) RequestRouteCandidates(ctx context.Context, trackingId domain.TrackingId) ([]domain.Itinerary, error) {
+func (s *BookingApplicationService) RequestRouteCandidates(ctx context.Context, trackingId bookingdomain.TrackingId) ([]bookingdomain.Itinerary, error) {
 	// Check permissions
 	claims, err := auth.ExtractClaims(ctx)
 	if err != nil {
@@ -222,7 +222,7 @@ func (s *BookingApplicationService) RequestRouteCandidates(ctx context.Context, 
 }
 
 // UpdateCargoDelivery updates cargo delivery status based on handling events
-func (s *BookingApplicationService) UpdateCargoDelivery(ctx context.Context, trackingId domain.TrackingId, handlingHistory []domain.HandlingEventSummary) error {
+func (s *BookingApplicationService) UpdateCargoDelivery(ctx context.Context, trackingId bookingdomain.TrackingId, handlingHistory []bookingdomain.HandlingEventSummary) error {
 	s.logger.Info("Updating cargo delivery status", "trackingId", trackingId)
 
 	// Find cargo
@@ -252,7 +252,7 @@ func (s *BookingApplicationService) UpdateCargoDelivery(ctx context.Context, tra
 }
 
 // ListAllCargo retrieves all cargo from the repository
-func (s *BookingApplicationService) ListAllCargo(ctx context.Context) ([]domain.Cargo, error) {
+func (s *BookingApplicationService) ListAllCargo(ctx context.Context) ([]bookingdomain.Cargo, error) {
 	// Check permissions
 	claims, err := auth.ExtractClaims(ctx)
 	if err != nil {
@@ -278,7 +278,7 @@ func (s *BookingApplicationService) ListAllCargo(ctx context.Context) ([]domain.
 }
 
 // publishCargoEvents publishes all pending events from the cargo aggregate
-func (s *BookingApplicationService) publishCargoEvents(cargo domain.Cargo) {
+func (s *BookingApplicationService) publishCargoEvents(cargo bookingdomain.Cargo) {
 	events := cargo.GetEvents()
 	for _, event := range events {
 		if err := s.eventPublisher.Publish(event); err != nil {

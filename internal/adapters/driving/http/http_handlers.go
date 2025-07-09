@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"go_hex/internal/adapters/driving/http/middleware"
-	bookingDomain "go_hex/internal/booking/domain"
-	bookingPorts "go_hex/internal/booking/ports/primary"
+	"go_hex/internal/booking/bookingdomain"
+	bookingPorts "go_hex/internal/booking/ports/bookingprimary"
 	handlingDomain "go_hex/internal/handling/domain"
 	handlingPrimary "go_hex/internal/handling/ports/primary"
 	routingDomain "go_hex/internal/routing/domain"
@@ -215,7 +215,7 @@ func (h *Handler) TrackCargoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse tracking ID
-	trackingId, err := bookingDomain.TrackingIdFromString(trackingIdStr)
+	trackingId, err := bookingdomain.TrackingIdFromString(trackingIdStr)
 	if err != nil {
 		h.writeErrorResponse(w, "invalid_tracking_id", "Invalid tracking ID format", http.StatusBadRequest)
 		return
@@ -256,7 +256,7 @@ func (h *Handler) RequestRouteCandidatesHandler(w http.ResponseWriter, r *http.R
 	}
 
 	// Parse tracking ID
-	trackingId, err := bookingDomain.TrackingIdFromString(req.TrackingId)
+	trackingId, err := bookingdomain.TrackingIdFromString(req.TrackingId)
 	if err != nil {
 		h.writeErrorResponse(w, "invalid_tracking_id", "Invalid tracking ID format", http.StatusBadRequest)
 		return
@@ -300,7 +300,7 @@ func (h *Handler) SubmitHandlingReportHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	// Validate tracking ID format
-	_, err := bookingDomain.TrackingIdFromString(req.TrackingId)
+	_, err := bookingdomain.TrackingIdFromString(req.TrackingId)
 	if err != nil {
 		h.writeErrorResponse(w, "invalid_tracking_id", "Invalid tracking ID format", http.StatusBadRequest)
 		return
@@ -374,14 +374,14 @@ func (h *Handler) AssignRouteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse tracking ID
-	trackingId, err := bookingDomain.TrackingIdFromString(trackingIdStr)
+	trackingId, err := bookingdomain.TrackingIdFromString(trackingIdStr)
 	if err != nil {
 		h.writeErrorResponse(w, "invalid_tracking_id", "Invalid tracking ID format", http.StatusBadRequest)
 		return
 	}
 
 	// Convert request legs to domain itinerary
-	var legs []bookingDomain.Leg
+	var legs []bookingdomain.Leg
 	for _, legReq := range req.Legs {
 		// Parse times
 		departureTime, err := time.Parse(time.RFC3339, legReq.LoadTime)
@@ -396,7 +396,7 @@ func (h *Handler) AssignRouteHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Create leg
-		leg, err := bookingDomain.NewLeg(legReq.VoyageNumber, legReq.LoadLocation, legReq.UnloadLocation, departureTime, arrivalTime)
+		leg, err := bookingdomain.NewLeg(legReq.VoyageNumber, legReq.LoadLocation, legReq.UnloadLocation, departureTime, arrivalTime)
 		if err != nil {
 			h.writeErrorResponse(w, "invalid_leg", err.Error(), http.StatusBadRequest)
 			return
@@ -405,7 +405,7 @@ func (h *Handler) AssignRouteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create itinerary
-	itinerary, err := bookingDomain.NewItinerary(legs)
+	itinerary, err := bookingdomain.NewItinerary(legs)
 	if err != nil {
 		h.writeErrorResponse(w, "invalid_itinerary", err.Error(), http.StatusBadRequest)
 		return

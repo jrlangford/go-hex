@@ -9,7 +9,7 @@ import (
 	"math/rand"
 	"time"
 
-	bookingDomain "go_hex/internal/booking/domain"
+	"go_hex/internal/booking/bookingdomain"
 	handlingDomain "go_hex/internal/handling/domain"
 	routingDomain "go_hex/internal/routing/domain"
 )
@@ -190,7 +190,7 @@ func (g *TestDataGenerator) generateSingleVoyage(locations []routingDomain.Locat
 
 // CargoTestData represents a complete cargo scenario for testing
 type CargoTestData struct {
-	Cargo           bookingDomain.Cargo
+	Cargo           bookingdomain.Cargo
 	Origin          string
 	Destination     string
 	ArrivalDeadline time.Time
@@ -245,7 +245,7 @@ func (g *TestDataGenerator) generateCargoScenario(locations []routingDomain.Loca
 	arrivalDeadline := time.Now().Add(time.Duration(daysInFuture) * 24 * time.Hour)
 
 	// Create cargo
-	cargo, err := bookingDomain.NewCargo(origin, destination, arrivalDeadline)
+	cargo, err := bookingdomain.NewCargo(origin, destination, arrivalDeadline)
 	if err != nil {
 		g.logger.Error("Failed to create cargo", "error", err)
 		return nil
@@ -391,7 +391,7 @@ type TestRepositories struct {
 		Store(routingDomain.Voyage) error
 	}
 	CargoRepo interface {
-		Store(bookingDomain.Cargo) error
+		Store(bookingdomain.Cargo) error
 	}
 	HandlingEventRepo interface {
 		Store(handlingDomain.HandlingEvent) error
