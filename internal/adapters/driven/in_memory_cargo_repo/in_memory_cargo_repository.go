@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sync"
 
-	"go_hex/internal/core/booking/domain"
-	"go_hex/internal/core/booking/ports/secondary"
+	"go_hex/internal/booking/domain"
+	"go_hex/internal/booking/ports/secondary"
 )
 
 // InMemoryCargoRepository provides an in-memory implementation of the CargoRepository

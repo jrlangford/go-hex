@@ -98,16 +98,6 @@ func RegisterRoutes(mux *http.ServeMux, handler *Handler) {
 	mux.HandleFunc("/", handler.DefaultHandler)
 }
 
-// extractIDFromPath extracts resource ID from REST URL path
-func extractIDFromPath(path, prefix string) string {
-	if !strings.HasPrefix(path, prefix) {
-		return ""
-	}
-	id := strings.TrimPrefix(path, prefix)
-	id = strings.Split(id, "/")[0] // Take only the first segment after prefix
-	return id
-}
-
 func writeMethodNotAllowedError(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusMethodNotAllowed)

@@ -18,8 +18,8 @@ import (
 	bookingApp "go_hex/internal/core/booking/application"
 	bookingDomain "go_hex/internal/core/booking/domain"
 	handlingApp "go_hex/internal/core/handling/application"
+	"go_hex/internal/core/handling/domain"
 	handlingDomain "go_hex/internal/core/handling/domain"
-	handlingPrimary "go_hex/internal/core/handling/ports/primary"
 	routingApp "go_hex/internal/core/routing/application"
 )
 
@@ -123,7 +123,7 @@ func TestCargoShippingSystemIntegration(t *testing.T) {
 
 	// Test 4: Submit handling report (Handling->Booking asynchronous integration)
 	t.Log("Test 4: Submitting handling report")
-	handlingReport := handlingPrimary.HandlingReport{
+	handlingReport := domain.HandlingReport{
 		TrackingId:     cargo.GetTrackingId().String(),
 		EventType:      string(handlingDomain.HandlingEventTypeLoad),
 		Location:       "SESTO",

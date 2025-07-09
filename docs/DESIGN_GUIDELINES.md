@@ -21,21 +21,21 @@ This project follows DDD principles with a hexagonal (ports and adapters) struct
 
 ### 2. Layer Responsibilities
 
-#### Domain Layer (`internal/core/{context}/domain/`)
+#### Domain Layer (`internal/{context}/domain/`)
 
 - Contains pure business logic and rules
 - Defines domain entities, value objects, and domain services
 - Publishes domain events for cross-context communication
 - Has zero dependencies on infrastructure or application layers
 
-#### Application Layer (`internal/core/{context}/application/`)
+#### Application Layer (`internal/{context}/application/`)
 
 - Orchestrates business workflows
 - Handles use case execution
 - Coordinates between its corresponding domain service and external systems
 - Manages transactions and event publishing
 
-#### Ports (`internal/core/{context}/ports/`)
+#### Ports (`internal/{context}/ports/`)
 
 - **Primary ports**: Interfaces for driving the application (e.g., use case interfaces)
 - **Secondary ports**: Interfaces for driven dependencies (e.g., repositories, external services)
@@ -51,13 +51,12 @@ This project follows DDD principles with a hexagonal (ports and adapters) struct
 ├── cmd/                   # Application entry point
 │   └── main.go            # Main application bootstrap with dependency wiring
 ├── internal/
-│   ├── core/                           # Business logic
-│   │   ├── {context}/                  # Bounded context
-│   │   │   ├── domain/                 # Domain entities, value objects, events
-│   │   │   ├── application/            # Use cases, application services, authorization
-│   │   │   └── ports/                  # Interfaces
-│   │   │       ├── primary/            # Inbound interfaces (use cases)
-│   │   │       └── secondary/          # Outbound interfaces (repositories, etc.)
+│   ├── {context}/                      # Bounded context
+│   │   ├── domain/                     # Domain entities, value objects, events
+│   │   ├── application/                # Use cases, application services, authorization
+│   │   └── ports/                      # Interfaces
+│   │       ├── primary/                # Inbound interfaces (use cases)
+│   │       └── secondary/              # Outbound interfaces (repositories, etc.)
 │   ├── adapters/                       # Infrastructure implementations
 │   │   ├── driving/                    # Inbound adapters (HTTP, CLI, etc.)
 │   │   ├── driven/                     # Outbound adapters (DB, external APIs)
@@ -129,6 +128,7 @@ type EventHandler interface {
 
 - Place integration event handlers in `adapters/integration/`
 - Implement Anti-Corruption Layer (ACL) pattern
+- When the handler needs to call another context, it should do so through the other service's primary port interface, ensuring that the call is stateless and does not introduce dependencies on the other context's implementation details.
 - Handle failures gracefully with retries and dead letter queues
 - Always use ACL when consuming events or data from other bounded contexts.
 - ACL adapters should be stateless and focus purely on translation and validation.
@@ -285,11 +285,12 @@ func (s *ApplicationService) ExecuteUseCase(ctx context.Context, cmd Command) er
 
 ### Early Integration with Other Systems
 
-- Implement a skeleton for adapters so that other systems can start integrating early
-- Generate dummy data for integration tests to allow other teams to test their systems against the application
-- Mocked application services should use actual domain objects to ensure that the integration points are well-defined
-- Allow the application to run in mock mode, where it can be started without any external dependencies
-- Update mocked application services periodically to reflect changes in the domain model, ensuring that integration points remain valid
+- Implement a mock application for each bounded context that satisfies primary adapters so that other systems can start integrating early
+  - Mocked application services should:
+    - Embed the main application service interfaces to ensure they can be used as drop-in replacements
+    - Use actual domain objects to ensure that the integration points are well-defined
+    - Generate realistic dummy data for integration tests
+- Allow the system to run in mock mode, where it can be started without any external dependencies and using the mock application services to simulate the behavior of the actual system
 
 ## Configuration Management
 

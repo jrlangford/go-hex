@@ -3,9 +3,9 @@ package http
 import (
 	"time"
 
-	"go_hex/internal/core/booking/domain"
-	handlingDomain "go_hex/internal/core/handling/domain"
-	routingDomain "go_hex/internal/core/routing/domain"
+	"go_hex/internal/booking/domain"
+	handlingDomain "go_hex/internal/handling/domain"
+	routingDomain "go_hex/internal/routing/domain"
 )
 
 // BookCargoRequest represents the request payload for booking cargo

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sync"
 
-	"go_hex/internal/core/routing/domain"
-	"go_hex/internal/core/routing/ports/secondary"
+	"go_hex/internal/routing/domain"
+	"go_hex/internal/routing/ports/secondary"
 )
 
 // InMemoryLocationRepository provides an in-memory implementation of the LocationRepository
@@ -16,14 +16,9 @@ type InMemoryLocationRepository struct {
 
 // NewInMemoryLocationRepository creates a new in-memory location repository
 func NewInMemoryLocationRepository() secondary.LocationRepository {
-	repo := &InMemoryLocationRepository{
+	return &InMemoryLocationRepository{
 		locations: make(map[string]domain.Location),
 	}
-
-	// Seed with some sample data for testing
-	repo.seedSampleData()
-
-	return repo
 }
 
 // Store saves a location to the repository
@@ -58,20 +53,4 @@ func (r *InMemoryLocationRepository) FindAll() ([]domain.Location, error) {
 		locations = append(locations, location)
 	}
 	return locations, nil
-}
-
-// seedSampleData adds some sample locations for testing and demonstration
-func (r *InMemoryLocationRepository) seedSampleData() {
-	// Create sample locations
-	loc1, _ := domain.NewLocation("SESTO", "Stockholm", "SE")
-	loc2, _ := domain.NewLocation("FIHEL", "Helsinki", "FI")
-	loc3, _ := domain.NewLocation("DEHAM", "Hamburg", "DE")
-	loc4, _ := domain.NewLocation("DKCPH", "Copenhagen", "DK")
-	loc5, _ := domain.NewLocation("NLRTM", "Rotterdam", "NL")
-
-	r.locations[loc1.GetUnLocode().String()] = loc1
-	r.locations[loc2.GetUnLocode().String()] = loc2
-	r.locations[loc3.GetUnLocode().String()] = loc3
-	r.locations[loc4.GetUnLocode().String()] = loc4
-	r.locations[loc5.GetUnLocode().String()] = loc5
 }

@@ -9,9 +9,8 @@ import (
 	"testing"
 	"time"
 
-	bookingDomain "go_hex/internal/core/booking/domain"
-	handlingDomain "go_hex/internal/core/handling/domain"
-	handlingPrimary "go_hex/internal/core/handling/ports/primary"
+	bookingDomain "go_hex/internal/booking/domain"
+	handlingDomain "go_hex/internal/handling/domain"
 	"go_hex/internal/support/auth"
 
 	"github.com/stretchr/testify/assert"
@@ -82,7 +81,7 @@ type MockHandlingReportService struct {
 	mock.Mock
 }
 
-func (m *MockHandlingReportService) SubmitHandlingReport(ctx context.Context, report handlingPrimary.HandlingReport) error {
+func (m *MockHandlingReportService) SubmitHandlingReport(ctx context.Context, report handlingDomain.HandlingReport) error {
 	args := m.Called(ctx, report)
 	return args.Error(0)
 }
@@ -341,7 +340,7 @@ func addAuthContext(req *http.Request) *http.Request {
 	if err != nil {
 		panic(err)
 	}
-	
+
 	ctx := context.WithValue(req.Context(), auth.ClaimsContextKey, claims)
 	return req.WithContext(ctx)
 }

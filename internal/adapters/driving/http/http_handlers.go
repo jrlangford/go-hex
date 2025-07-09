@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"go_hex/internal/adapters/driving/http/middleware"
-	bookingDomain "go_hex/internal/core/booking/domain"
-	bookingPorts "go_hex/internal/core/booking/ports/primary"
-	handlingDomain "go_hex/internal/core/handling/domain"
-	handlingPrimary "go_hex/internal/core/handling/ports/primary"
-	routingApp "go_hex/internal/core/routing/application"
-	routingDomain "go_hex/internal/core/routing/domain"
+	bookingDomain "go_hex/internal/booking/domain"
+	bookingPorts "go_hex/internal/booking/ports/primary"
+	handlingDomain "go_hex/internal/handling/domain"
+	handlingPrimary "go_hex/internal/handling/ports/primary"
+	routingDomain "go_hex/internal/routing/domain"
+	routingPorts "go_hex/internal/routing/ports/primary"
 	"go_hex/internal/support/validation"
 	"net/http"
 	"net/url"
@@ -22,7 +22,7 @@ import (
 type Handler struct {
 	authMiddleware        *middleware.AuthMiddleware
 	bookingService        bookingPorts.BookingService
-	routingService        *routingApp.RoutingApplicationService
+	routingService        routingPorts.RouteFinder
 	handlingReportService handlingPrimary.HandlingReportService
 	handlingQueryService  handlingPrimary.HandlingEventQueryService
 }
@@ -31,7 +31,7 @@ type Handler struct {
 func NewHandler(
 	authMiddleware *middleware.AuthMiddleware,
 	bookingService bookingPorts.BookingService,
-	routingService *routingApp.RoutingApplicationService,
+	routingService routingPorts.RouteFinder,
 	handlingReportService handlingPrimary.HandlingReportService,
 	handlingQueryService handlingPrimary.HandlingEventQueryService,
 ) *Handler {
@@ -74,27 +74,27 @@ func (h *Handler) extractResourceIDFromPath(urlPath, basePattern string) (string
 	// Clean the URL path using Go's path utilities
 	cleanPath := path.Clean(urlPath)
 	cleanBase := path.Clean(basePattern)
-	
+
 	// Remove query parameters
 	if parsed, err := url.Parse(cleanPath); err == nil {
 		cleanPath = parsed.Path
 	}
-	
+
 	// Check if path starts with the base pattern
 	if !strings.HasPrefix(cleanPath, cleanBase) {
 		return "", fmt.Errorf("path %s does not match base pattern %s", cleanPath, cleanBase)
 	}
-	
+
 	// Extract the ID part
 	remainder := strings.TrimPrefix(cleanPath, cleanBase)
 	remainder = strings.Trim(remainder, "/")
-	
+
 	// Split by "/" and take the first segment as the ID
 	parts := strings.Split(remainder, "/")
 	if len(parts) > 0 && parts[0] != "" {
 		return parts[0], nil
 	}
-	
+
 	return "", fmt.Errorf("no resource ID found in path %s", urlPath)
 }
 
@@ -314,7 +314,7 @@ func (h *Handler) SubmitHandlingReportHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	// Submit handling report
-	report := handlingPrimary.HandlingReport{
+	report := handlingDomain.HandlingReport{
 		TrackingId:     req.TrackingId,
 		EventType:      req.EventType,
 		Location:       req.Location,

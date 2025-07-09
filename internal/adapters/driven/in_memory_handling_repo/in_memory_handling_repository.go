@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sync"
 
-	"go_hex/internal/core/handling/domain"
-	"go_hex/internal/core/handling/ports/secondary"
+	"go_hex/internal/handling/domain"
+	"go_hex/internal/handling/ports/secondary"
 )
 
 // InMemoryHandlingEventRepository provides an in-memory implementation of the HandlingEventRepository

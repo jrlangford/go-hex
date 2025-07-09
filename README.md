@@ -68,7 +68,7 @@ The template includes JWT-based authentication with role-based access control:
 ```bash
 # Generate tokens for testing
 go run tools/generate_test_token.go admin    # Full access
-go run tools/generate_test_token.go user     # Standard operations  
+go run tools/generate_test_token.go user     # Standard operations
 go run tools/generate_test_token.go readonly # Read-only access
 ```
 

@@ -7,9 +7,10 @@ import (
 	"log/slog"
 	"time"
 
-	bookingDomain "go_hex/internal/core/booking/domain"
-	handlingDomain "go_hex/internal/core/handling/domain"
-	handlingPrimary "go_hex/internal/core/handling/ports/primary"
+	bookingDomain "go_hex/internal/booking/domain"
+	bookingPrimary "go_hex/internal/booking/ports/primary"
+	handlingDomain "go_hex/internal/handling/domain"
+	handlingPrimary "go_hex/internal/handling/ports/primary"
 )
 
 // ScenarioExecutor runs test scenarios against the application services
@@ -27,14 +28,7 @@ func NewScenarioExecutor(env *TestEnvironment) *ScenarioExecutor {
 }
 
 // ExecuteCargoScenario runs a complete cargo shipping scenario
-func (se *ScenarioExecutor) ExecuteCargoScenario(ctx context.Context, scenario CargoTestData, bookingService interface {
-	BookNewCargo(ctx context.Context, origin, destination string, arrivalDeadline string) (bookingDomain.Cargo, error)
-	RequestRouteCandidates(ctx context.Context, trackingId bookingDomain.TrackingId) ([]bookingDomain.Itinerary, error)
-	AssignRouteToCargo(ctx context.Context, trackingId bookingDomain.TrackingId, itinerary bookingDomain.Itinerary) error
-	GetCargoDetails(ctx context.Context, trackingId bookingDomain.TrackingId) (bookingDomain.Cargo, error)
-}, handlingService interface {
-	SubmitHandlingReport(ctx context.Context, report handlingPrimary.HandlingReport) error
-}) error {
+func (se *ScenarioExecutor) ExecuteCargoScenario(ctx context.Context, scenario CargoTestData, bookingService bookingPrimary.BookingService, handlingService handlingPrimary.HandlingReportService) error {
 
 	se.logger.Info("Executing cargo scenario",
 		"origin", scenario.Origin,
@@ -87,7 +81,7 @@ func (se *ScenarioExecutor) ExecuteCargoScenario(ctx context.Context, scenario C
 		}
 
 		// Submit handling report
-		handlingReport := handlingPrimary.HandlingReport{
+		handlingReport := handlingDomain.HandlingReport{
 			TrackingId:     cargo.GetTrackingId().String(),
 			EventType:      string(eventData.EventType),
 			Location:       eventData.Location,
@@ -124,14 +118,7 @@ func (se *ScenarioExecutor) ExecuteCargoScenario(ctx context.Context, scenario C
 }
 
 // ExecuteAllScenarios runs all generated cargo scenarios
-func (se *ScenarioExecutor) ExecuteAllScenarios(ctx context.Context, bookingService interface {
-	BookNewCargo(ctx context.Context, origin, destination string, arrivalDeadline string) (bookingDomain.Cargo, error)
-	RequestRouteCandidates(ctx context.Context, trackingId bookingDomain.TrackingId) ([]bookingDomain.Itinerary, error)
-	AssignRouteToCargo(ctx context.Context, trackingId bookingDomain.TrackingId, itinerary bookingDomain.Itinerary) error
-	GetCargoDetails(ctx context.Context, trackingId bookingDomain.TrackingId) (bookingDomain.Cargo, error)
-}, handlingService interface {
-	SubmitHandlingReport(ctx context.Context, report handlingPrimary.HandlingReport) error
-}) error {
+func (se *ScenarioExecutor) ExecuteAllScenarios(ctx context.Context, bookingService bookingPrimary.BookingService, handlingService handlingPrimary.HandlingReportService) error {
 
 	scenarios := se.env.GetTestScenarios()
 	se.logger.Info("Executing all cargo scenarios", "count", len(scenarios))

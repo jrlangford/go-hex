@@ -4,22 +4,22 @@ import (
 	"context"
 	"log/slog"
 
-	bookingApp "go_hex/internal/core/booking/application"
-	bookingDomain "go_hex/internal/core/booking/domain"
-	handlingDomain "go_hex/internal/core/handling/domain"
+	bookingDomain "go_hex/internal/booking/domain"
+	bookingPrimary "go_hex/internal/booking/ports/primary"
+	handlingDomain "go_hex/internal/handling/domain"
 	"go_hex/internal/support/basedomain"
 )
 
 // HandlingToBookingEventHandler handles events from Handling context
 // and applies them to the Booking context via Anti-Corruption Layer
 type HandlingToBookingEventHandler struct {
-	bookingService *bookingApp.BookingApplicationService
+	bookingService bookingPrimary.BookingService
 	logger         *slog.Logger
 }
 
 // NewHandlingToBookingEventHandler creates a new event handler for Handling->Booking integration
 func NewHandlingToBookingEventHandler(
-	bookingService *bookingApp.BookingApplicationService,
+	bookingService bookingPrimary.BookingService,
 	logger *slog.Logger,
 ) *HandlingToBookingEventHandler {
 	return &HandlingToBookingEventHandler{

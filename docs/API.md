@@ -287,7 +287,7 @@ Lists available voyages.
 
 **Query Parameters:**
 - `from` (optional): Filter by departure location
-- `to` (optional): Filter by arrival location  
+- `to` (optional): Filter by arrival location
 - `departure_date` (optional): Filter by departure date (YYYY-MM-DD)
 
 **Response:** `200 OK`
@@ -478,32 +478,35 @@ go run tools/generate_test_token.go user-123 test.user admin,user test@example.c
 
 ### Complete Cargo Booking Flow
 
-1. **Book cargo:**
+**Book cargo:**
+
 ```bash
 curl -X POST http://localhost:8080/api/v1/cargos \
-  -H "Authorization: Bearer <token>" \
+  -H "Authorization: Bearer $JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "origin": "SESTO",
-    "destination": "USNYC",
-    "arrivalDeadline": "2024-12-31T23:59:59Z"
+    "origin": "FRPAR",
+    "destination": "NOTOS",
+    "arrivalDeadline": "2025-08-31T23:59:59Z"
   }'
 ```
 
-2. **Find route candidates:**
+**Find route candidates:**
+
 ```bash
 curl -X POST http://localhost:8080/api/v1/route-candidates \
-  -H "Authorization: Bearer <token>" \
+  -H "Authorization: Bearer $JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "trackingId": "{trackingId}"
   }'
 ```
 
-3. **Assign route to cargo:**
+**Assign route to cargo:**
+
 ```bash
 curl -X PUT http://localhost:8080/api/v1/cargos/{trackingId}/route \
-  -H "Authorization: Bearer <token>" \
+  -H "Authorization: Bearer $JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "legs": [
@@ -518,10 +521,11 @@ curl -X PUT http://localhost:8080/api/v1/cargos/{trackingId}/route \
   }'
 ```
 
-4. **Register handling events:**
+**Register handling events:**
+
 ```bash
 curl -X POST http://localhost:8080/api/v1/handling-events \
-  -H "Authorization: Bearer <token>" \
+  -H "Authorization: Bearer $JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "trackingId": "{trackingId}",
@@ -531,9 +535,10 @@ curl -X POST http://localhost:8080/api/v1/handling-events \
   }'
 ```
 
-5. **Track cargo:**
+**Track cargo:**
+
 ```bash
-curl -H "Authorization: Bearer <token>" \
+curl -H "Authorization: Bearer $JWT_TOKEN" \
   http://localhost:8080/api/v1/cargos/{trackingId}
 ```
 
