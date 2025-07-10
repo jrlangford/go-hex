@@ -275,7 +275,6 @@ The cargo shipping implementation showcases:
 - **Domain-Driven Design**: Clear bounded contexts with rich domain models
 - **Hexagonal Architecture**: Clean separation of business logic from infrastructure
 - **Domain-Specific Authorization**: Each bounded context defines its own permissions
-- **CQRS**: Separate command and query responsibilities
 - **Event Sourcing**: Domain events for inter-context communication
 - **Anti-Corruption Layers**: Protected integration boundaries
 - **REST API**: Modern HTTP API following REST principles

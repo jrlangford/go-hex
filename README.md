@@ -18,7 +18,6 @@ This template implements several key architectural patterns:
 - **Domain-Driven Design**: Clear bounded contexts with rich domain models
 - **Hexagonal Architecture**: Clean separation of business logic from infrastructure
 - **Event-Driven Architecture**: Asynchronous inter-context communication
-- **CQRS**: Separate command and query responsibilities
 - **Anti-Corruption Layers**: Protected integration boundaries
 - **REST API**: Modern HTTP API following REST principles
 - **JWT Security**: Token-based authentication with role-based access
