@@ -12,6 +12,7 @@ type Config struct {
 	Port        int       `json:"port" validate:"required,min=1,max=65535"`
 	Environment string    `json:"environment" validate:"required,environment"`
 	LogLevel    string    `json:"log_level" validate:"required,log_level"`
+	Mode        string    `json:"mode" validate:"required,mode"`
 	JWT         JWTConfig `json:"jwt"`
 }
 
@@ -28,6 +29,7 @@ func New() (*Config, error) {
 		Port:        8080,
 		Environment: "development",
 		LogLevel:    "info",
+		Mode:        "live", // Default mode
 		JWT: JWTConfig{
 			SecretKey: "your-secret-key-7890123456789012", // Default for development
 			Issuer:    "go-hex-service",
@@ -49,6 +51,10 @@ func New() (*Config, error) {
 
 	if logLevel := os.Getenv("LOG_LEVEL"); logLevel != "" {
 		config.LogLevel = logLevel
+	}
+
+	if mode := os.Getenv("APP_MODE"); mode != "" {
+		config.Mode = mode
 	}
 
 	// JWT configuration from environment variables
@@ -78,4 +84,12 @@ func (c *Config) IsDevelopment() bool {
 
 func (c *Config) IsProduction() bool {
 	return c.Environment == "production"
+}
+
+func (c *Config) IsMockMode() bool {
+	return c.Mode == "mock"
+}
+
+func (c *Config) IsLiveMode() bool {
+	return c.Mode == "live"
 }

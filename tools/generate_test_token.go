@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"go_hex/internal/support/config"
 	"os"
 	"strconv"
 	"time"
@@ -19,22 +20,59 @@ type JWTClaims struct {
 }
 
 func main() {
+	// Check for predefined token sets
+	if len(os.Args) == 2 {
+		preset := os.Args[1]
+		switch preset {
+		case "admin":
+			generatePresetToken("admin-001", "admin.user", "admin@cargo-shipping.com", []string{"admin"}, 24)
+			return
+		case "user":
+			generatePresetToken("user-001", "standard.user", "user@cargo-shipping.com", []string{"user"}, 24)
+			return
+		case "readonly":
+			generatePresetToken("readonly-001", "readonly.user", "readonly@cargo-shipping.com", []string{"readonly"}, 24)
+			return
+		case "super":
+			generatePresetToken("super-001", "super.admin", "super@cargo-shipping.com", []string{"admin", "user", "readonly"}, 24)
+			return
+		}
+	}
+
 	if len(os.Args) < 4 {
-		fmt.Println("Usage: go run generate_test_token.go <userID> <username> <roles> [email] [expiresInHours]")
-		fmt.Println("Example: go run generate_test_token.go user-123 john.doe user,admin john@example.com 24")
+		fmt.Println("Cargo Shipping System JWT Token Generator")
+		fmt.Println("=========================================")
 		fmt.Println("")
-		fmt.Println("Common role combinations:")
-		fmt.Println("  admin,user   - Full access (admin can do everything)")
-		fmt.Println("  user         - Standard user (can add, view, update, greet)")
-		fmt.Println("  readonly     - Read-only access (can only view and greet)")
+		fmt.Println("PREDEFINED TOKEN SETS:")
+		fmt.Println("  go run generate_test_token.go admin    - Full access (all operations)")
+		fmt.Println("  go run generate_test_token.go user     - Standard access (booking, viewing, tracking)")
+		fmt.Println("  go run generate_test_token.go readonly - Read-only access (viewing only)")
+		fmt.Println("  go run generate_test_token.go super    - All roles combined (for testing)")
 		fmt.Println("")
-		fmt.Println("Test endpoints:")
-		fmt.Println("  GET  /auth/me                 - View current user info")
-		fmt.Println("  GET  /friends                 - List all friends (any auth)")
-		fmt.Println("  POST /friends                 - Add friend (admin only)")
-		fmt.Println("  GET  /friends/{id}            - Get specific friend (any auth)")
-		fmt.Println("  PUT  /friends/{id}            - Update friend (any auth)")
-		fmt.Println("  DELETE /friends/{id}          - Delete friend (admin only)")
+		fmt.Println("CUSTOM TOKEN:")
+		fmt.Println("  go run generate_test_token.go <userID> <username> <roles> [email] [expiresInHours]")
+		fmt.Println("  Example: go run generate_test_token.go user-123 john.doe admin,user john@example.com 24")
+		fmt.Println("")
+		fmt.Println("ROLE PERMISSIONS:")
+		fmt.Println("  admin    - All operations (booking, routing, handling, administration)")
+		fmt.Println("           - Can book cargo, assign routes, submit handling events")
+		fmt.Println("  user     - Standard operations (booking, viewing, basic routing)")
+		fmt.Println("           - Can book cargo, view details, request routes")
+		fmt.Println("  readonly - View-only access (tracking, viewing)")
+		fmt.Println("           - Can view cargo, voyages, locations, handling events")
+		fmt.Println("")
+		fmt.Println("API ENDPOINTS TO TEST:")
+		fmt.Println("  GET  /health                                    - System health (no auth)")
+		fmt.Println("  GET  /info                                      - System info (no auth)")
+		fmt.Println("  POST /api/v1/cargos                            - Book cargo (user, admin)")
+		fmt.Println("  GET  /api/v1/cargos                            - List cargo (user, admin, readonly)")
+		fmt.Println("  GET  /api/v1/cargos/{trackingId}               - Get cargo details (user, admin, readonly)")
+		fmt.Println("  PUT  /api/v1/cargos/{trackingId}/route         - Assign route (user, admin)")
+		fmt.Println("  POST /api/v1/route-candidates                  - Find routes (user, admin)")
+		fmt.Println("  GET  /api/v1/voyages                           - List voyages (user, admin, readonly)")
+		fmt.Println("  GET  /api/v1/locations                         - List locations (user, admin, readonly)")
+		fmt.Println("  POST /api/v1/handling-events                   - Submit handling (user, admin)")
+		fmt.Println("  GET  /api/v1/handling-events                   - View handling (user, admin, readonly)")
 		fmt.Println("")
 		os.Exit(1)
 	}
@@ -107,8 +145,17 @@ func simpleStringSplit(s, sep string) []string {
 }
 
 func createJWTToken(userID, username, email string, roles []string, expiresInHours int) string {
-	// Secret key used for signing (must match the one used in the application)
-	secretKey := "your-secret-key-7890123456789012" // Must match main.go
+	// Load configuration (including JWT settings) from environment
+	cfg, err := config.New()
+	if err != nil {
+		fmt.Printf("Error loading configuration: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Use the same secret key, issuer, and audience as the server
+	secretKey := cfg.JWT.SecretKey
+	issuer := cfg.JWT.Issuer
+	audience := cfg.JWT.Audience
 
 	// Create the claims
 	now := time.Now()
@@ -121,8 +168,8 @@ func createJWTToken(userID, username, email string, roles []string, expiresInHou
 		Roles:    roles,
 		Metadata: map[string]string{"generated": "true"},
 		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    "go-hex-service",
-			Audience:  []string{"go-hex-api"},
+			Issuer:    issuer,
+			Audience:  []string{audience},
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 		},
@@ -139,4 +186,16 @@ func createJWTToken(userID, username, email string, roles []string, expiresInHou
 	}
 
 	return tokenString
+}
+
+func generatePresetToken(userID, username, email string, roles []string, expiresInHours int) {
+	token := createJWTToken(userID, username, email, roles, expiresInHours)
+
+	fmt.Printf("Generated %s Token:\n", roles[0])
+	fmt.Printf("User: %s (%s)\n", username, email)
+	fmt.Printf("Roles: %v\n", roles)
+	fmt.Printf("Expires: %s\n", time.Now().Add(time.Duration(expiresInHours)*time.Hour).Format(time.RFC3339))
+	fmt.Printf("\nToken:\n%s\n", token)
+	fmt.Printf("\nTest with curl:\n")
+	fmt.Printf("curl -H \"Authorization: Bearer %s\" http://localhost:8080/auth/me\n", token)
 }

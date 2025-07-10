@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
-	httpadapter "go_hex/internal/adapters/driving/http"
+	"go_hex/internal/adapters/driving/httpadapter"
 	"go_hex/internal/support/config"
 	"go_hex/internal/support/logging"
 	"net/http"
@@ -19,7 +19,7 @@ type HTTPServer struct {
 	handler *httpadapter.Handler
 }
 
-func New(cfg *config.Config, handler *httpadapter.Handler) *HTTPServer {
+func New(cfg *config.Config, handler *httpadapter.Handler, _ interface{}) *HTTPServer {
 	mux := http.NewServeMux()
 	httpadapter.RegisterRoutes(mux, handler)
 

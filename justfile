@@ -9,8 +9,8 @@ build:
     go build -o bin/server ./cmd
 
 # Run the application
-run:
-    go run ./cmd
+run app_mode="mock":
+    APP_MODE={{app_mode}} go run ./cmd
 
 # Run tests
 test:
@@ -19,7 +19,7 @@ test:
 # Run tests with coverage
 test-coverage:
     go test -v -coverprofile=coverage.out ./...
-    go tool cover -html=coverage.out
+    go tool cover -html=coverage.out -o coverage.html
 
 # Format code
 fmt:

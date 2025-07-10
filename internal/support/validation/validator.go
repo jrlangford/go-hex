@@ -44,6 +44,7 @@ func New() *Validator {
 	validate.RegisterValidation("permission", validatePermission)
 	validate.RegisterValidation("environment", validateEnvironment)
 	validate.RegisterValidation("log_level", validateLogLevel)
+	validate.RegisterValidation("mode", validateMode)
 	validate.RegisterValidation("phone_number", validatePhoneNumber)
 	validate.RegisterValidation("postal_code", validatePostalCode)
 	validate.RegisterValidation("currency", validateCurrency)
@@ -168,6 +169,18 @@ func validateLogLevel(fl validator.FieldLevel) bool {
 
 	for _, validLevel := range validLevels {
 		if level == validLevel {
+			return true
+		}
+	}
+	return false
+}
+
+func validateMode(fl validator.FieldLevel) bool {
+	mode := fl.Field().String()
+	validModes := []string{"mock", "live"}
+
+	for _, validMode := range validModes {
+		if mode == validMode {
 			return true
 		}
 	}
