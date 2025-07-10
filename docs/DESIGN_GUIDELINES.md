@@ -52,11 +52,11 @@ This project follows DDD principles with a hexagonal (ports and adapters) struct
 │   └── main.go            # Main application bootstrap with dependency wiring
 ├── internal/
 │   ├── {context}/                      # Bounded context
-│   │   ├── domain/                     # Domain entities, value objects, events
-│   │   ├── application/                # Use cases, application services, authorization
+│   │   ├── {context}domain/                     # Domain entities, value objects, events
+│   │   ├── {context}application/                # Use cases, application services, authorization
 │   │   └── ports/                      # Interfaces
-│   │       ├── primary/                # Inbound interfaces (use cases)
-│   │       └── secondary/              # Outbound interfaces (repositories, etc.)
+│   │       ├── {context}primary/                # Inbound interfaces (use cases)
+│   │       └── {context}secondary/              # Outbound interfaces (repositories, etc.)
 │   ├── adapters/                       # Infrastructure implementations
 │   │   ├── driving/                    # Inbound adapters (HTTP, CLI, etc.)
 │   │   ├── driven/                     # Outbound adapters (DB, external APIs)
@@ -69,7 +69,7 @@ This project follows DDD principles with a hexagonal (ports and adapters) struct
 │       ├── logging/                    # Logging utilities
 │       ├── validation/                 # Input validation
 │       └── server/                     # HTTP server setup and middleware
-├── pkg/                   # Public packages for reuse
+├── pkg/                   # Public packages
 ├── docs/                  # Repository documentation
 └── test/                  # Integration tests
     └── integration/       # Cross-context integration tests
